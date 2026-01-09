@@ -270,3 +270,47 @@ export const novedadesRelations = relations(novedadesExpedientes, ({ one }) => (
     references: [expedientes.id],
   }),
 }));
+
+
+// ============================================================================
+// SIGED CREDENTIALS & NOTIFICATIONS
+// ============================================================================
+
+/**
+ * Tabla para almacenar credenciales encriptadas del SIGED
+ */
+export const sigedCredentials = mysqlTable("siged_credentials", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  username: text("username").notNull(),
+  password: text("password").notNull(),
+  notificationEmail: varchar("notificationEmail", { length: 320 }).notNull(),
+  lastSuccessfulSync: timestamp("lastSuccessfulSync"),
+  lastSyncError: text("lastSyncError"),
+  isActive: int("isActive").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SigedCredentials = typeof sigedCredentials.$inferSelect;
+export type InsertSigedCredentials = typeof sigedCredentials.$inferInsert;
+
+/**
+ * Tabla para almacenar cedulas y notificaciones del casillero SIGED
+ */
+export const sigedNotificaciones = mysqlTable("siged_notificaciones", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  expedienteId: int("expedienteId"),
+  tipo: varchar("tipo", { length: 50 }).notNull(),
+  titulo: text("titulo").notNull(),
+  contenido: text("contenido"),
+  fechaNotificacion: timestamp("fechaNotificacion"),
+  leida: int("leida").default(0).notNull(),
+  urlSiged: text("urlSiged"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SigedNotificaciones = typeof sigedNotificaciones.$inferSelect;
+export type InsertSigedNotificaciones = typeof sigedNotificaciones.$inferInsert;

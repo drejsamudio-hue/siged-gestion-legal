@@ -195,6 +195,77 @@ export const appRouter = router({
       return sigedScraperService.escanearExpedientes(ctx.user.id);
     }),
   }),
+
+  sigedCredentials: router({
+    save: protectedProcedure
+      .input(
+        z.object({
+          username: z.string(),
+          password: z.string(),
+          notificationEmail: z.string().email(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        await db.saveSigedCredentials(
+          ctx.user.id,
+          input.username,
+          input.password,
+          input.notificationEmail
+        );
+        return { success: true };
+      }),
+    get: protectedProcedure.query(async ({ ctx }) => {
+      const creds = await db.getSigedCredentials(ctx.user.id);
+      if (!creds) return null;
+      return {
+        username: creds.username,
+        notificationEmail: creds.notificationEmail,
+        lastSuccessfulSync: creds.lastSuccessfulSync,
+        lastSyncError: creds.lastSyncError,
+      };
+    }),
+  }),
+
+  sigedScanReal: router({
+    scan: protectedProcedure.mutation(async ({ ctx }) => {
+      const creds = await db.getSigedCredentials(ctx.user.id);
+      if (!creds) {
+        throw new Error("SIGED credentials not configured");
+      }
+
+      try {
+        const { getSigedScraper } = require("./services/sigedScraperReal");
+        const scraper = getSigedScraper();
+        const resultado = await scraper.escaneoCompleto(creds.username, creds.password);
+
+        // Guardar notificaciones en la base de datos
+        for (const cedula of resultado.cedulas) {
+          await db.saveSigedNotificacion({
+            userId: ctx.user.id,
+            tipo: cedula.tipo,
+            titulo: cedula.titulo,
+            contenido: cedula.contenido,
+            fechaNotificacion: new Date(cedula.fecha),
+          });
+        }
+
+        await db.updateSigedSyncStatus(ctx.user.id, true);
+        return { success: true, novedades: resultado.novedades, cedulas: resultado.cedulas };
+      } catch (error: any) {
+        await db.updateSigedSyncStatus(ctx.user.id, false, error.message);
+        throw error;
+      }
+    }),
+    getNotificaciones: protectedProcedure.query(async ({ ctx }) => {
+      return db.getSigedNotificacionesPorUsuario(ctx.user.id, false);
+    }),
+    marcarComoLeida: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.marcarNotificacionComoLeida(input.id);
+        return { success: true };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

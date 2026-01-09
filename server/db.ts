@@ -1,21 +1,8 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import {
-  InsertUser,
-  users,
-  expedientes,
-  InsertExpediente,
-  notas,
-  InsertNota,
-  escritos,
-  InsertEscrito,
-  alertas,
-  InsertAlerta,
-  referenciasLegales,
-  conversaciones,
-  InsertConversacion,
-} from "../drizzle/schema";
+import { InsertUser, users, expedientes, notas, escritos, alertas, sigedCredentials, sigedNotificaciones, InsertSigedCredentials, InsertSigedNotificaciones } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { encryptText, decryptText } from "./services/encryptionService";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -104,7 +91,152 @@ export async function getUserByOpenId(openId: string) {
 }
 
 // ============================================================================
-// EXPEDIENTES QUERIES
+// SIGED CREDENTIALS
+// ============================================================================
+
+export async function saveSigedCredentials(
+  userId: number,
+  username: string,
+  password: string,
+  notificationEmail: string
+): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const encryptedUsername = encryptText(username);
+  const encryptedPassword = encryptText(password);
+
+  const existing = await db
+    .select()
+    .from(sigedCredentials)
+    .where(eq(sigedCredentials.userId, userId))
+    .limit(1);
+
+  if (existing.length > 0) {
+    await db
+      .update(sigedCredentials)
+      .set({
+        username: encryptedUsername,
+        password: encryptedPassword,
+        notificationEmail,
+        updatedAt: new Date(),
+      })
+      .where(eq(sigedCredentials.userId, userId));
+  } else {
+    await db.insert(sigedCredentials).values({
+      userId,
+      username: encryptedUsername,
+      password: encryptedPassword,
+      notificationEmail,
+      isActive: 1,
+    });
+  }
+}
+
+export async function getSigedCredentials(userId: number) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const result = await db
+    .select()
+    .from(sigedCredentials)
+    .where(and(eq(sigedCredentials.userId, userId), eq(sigedCredentials.isActive, 1)))
+    .limit(1);
+
+  if (result.length === 0) {
+    return null;
+  }
+
+  const creds = result[0];
+  return {
+    ...creds,
+    username: decryptText(creds.username),
+    password: decryptText(creds.password),
+  };
+}
+
+export async function updateSigedSyncStatus(
+  userId: number,
+  success: boolean,
+  error?: string
+): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const updateData: any = {
+    updatedAt: new Date(),
+  };
+
+  if (success) {
+    updateData.lastSuccessfulSync = new Date();
+    updateData.lastSyncError = null;
+  } else {
+    updateData.lastSyncError = error || "Unknown error";
+  }
+
+  await db
+    .update(sigedCredentials)
+    .set(updateData)
+    .where(eq(sigedCredentials.userId, userId));
+}
+
+// ============================================================================
+// SIGED NOTIFICACIONES
+// ============================================================================
+
+export async function saveSigedNotificacion(
+  data: InsertSigedNotificaciones
+): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  await db.insert(sigedNotificaciones).values(data);
+}
+
+export async function getSigedNotificacionesPorUsuario(userId: number, leidas = false) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const result = await db
+    .select()
+    .from(sigedNotificaciones)
+    .where(
+      and(
+        eq(sigedNotificaciones.userId, userId),
+        eq(sigedNotificaciones.leida, leidas ? 1 : 0)
+      )
+    );
+
+  return result;
+}
+
+export async function marcarNotificacionComoLeida(notificacionId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  await db
+    .update(sigedNotificaciones)
+    .set({ leida: 1, updatedAt: new Date() })
+    .where(eq(sigedNotificaciones.id, notificacionId));
+}
+
+// TODO: add feature queries here as your schema grows.
+
+
+// ============================================================================
+// EXPEDIENTES
 // ============================================================================
 
 export async function getExpedientesByUserId(userId: number) {
@@ -115,32 +247,25 @@ export async function getExpedientesByUserId(userId: number) {
 
 export async function getExpedienteById(id: number) {
   const db = await getDb();
-  if (!db) return undefined;
+  if (!db) return null;
   const result = await db.select().from(expedientes).where(eq(expedientes.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  return result.length > 0 ? result[0] : null;
 }
 
-export async function createExpediente(data: InsertExpediente) {
+export async function createExpediente(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(expedientes).values(data);
-  return result;
+  await db.insert(expedientes).values(data);
 }
 
-export async function updateExpediente(id: number, data: Partial<InsertExpediente>) {
+export async function updateExpediente(id: number, data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.update(expedientes).set(data).where(eq(expedientes.id, id));
-}
-
-export async function deleteExpediente(id: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  return db.delete(expedientes).where(eq(expedientes.id, id));
+  await db.update(expedientes).set(data).where(eq(expedientes.id, id));
 }
 
 // ============================================================================
-// NOTAS QUERIES
+// NOTAS
 // ============================================================================
 
 export async function getNotasByExpedienteId(expedienteId: number) {
@@ -149,61 +274,20 @@ export async function getNotasByExpedienteId(expedienteId: number) {
   return db.select().from(notas).where(eq(notas.expedienteId, expedienteId));
 }
 
-export async function createNota(data: InsertNota) {
+export async function createNota(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.insert(notas).values(data);
+  await db.insert(notas).values(data);
 }
 
 export async function deleteNota(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.delete(notas).where(eq(notas.id, id));
+  await db.delete(notas).where(eq(notas.id, id));
 }
 
 // ============================================================================
-// ESCRITOS QUERIES
-// ============================================================================
-
-export async function getEscritosByUserId(userId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  return db.select().from(escritos).where(eq(escritos.userId, userId));
-}
-
-export async function getEscritosByExpedienteId(expedienteId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  return db.select().from(escritos).where(eq(escritos.expedienteId, expedienteId));
-}
-
-export async function getEscritoById(id: number) {
-  const db = await getDb();
-  if (!db) return undefined;
-  const result = await db.select().from(escritos).where(eq(escritos.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
-}
-
-export async function createEscrito(data: InsertEscrito) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  return db.insert(escritos).values(data);
-}
-
-export async function updateEscrito(id: number, data: Partial<InsertEscrito>) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  return db.update(escritos).set(data).where(eq(escritos.id, id));
-}
-
-export async function deleteEscrito(id: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  return db.delete(escritos).where(eq(escritos.id, id));
-}
-
-// ============================================================================
-// ALERTAS QUERIES
+// ALERTAS
 // ============================================================================
 
 export async function getAlertasByUserId(userId: number) {
@@ -212,65 +296,68 @@ export async function getAlertasByUserId(userId: number) {
   return db.select().from(alertas).where(eq(alertas.userId, userId));
 }
 
-export async function getAlertasPendientes() {
-  const db = await getDb();
-  if (!db) return [];
-  return db.select().from(alertas).where(eq(alertas.enviado, false));
-}
-
-export async function createAlerta(data: InsertAlerta) {
+export async function createAlerta(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.insert(alertas).values(data);
+  await db.insert(alertas).values(data);
 }
 
-export async function updateAlerta(id: number, data: Partial<InsertAlerta>) {
+export async function updateAlerta(id: number, data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.update(alertas).set(data).where(eq(alertas.id, id));
+  await db.update(alertas).set(data).where(eq(alertas.id, id));
+}
+
+export async function deleteAlerta(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(alertas).where(eq(alertas.id, id));
 }
 
 // ============================================================================
-// REFERENCIAS LEGALES QUERIES
+// ESCRITOS
 // ============================================================================
 
-export async function getReferenciasLegales() {
+export async function getEscritosByExpedienteId(expedienteId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(referenciasLegales);
+  return db.select().from(escritos).where(eq(escritos.expedienteId, expedienteId));
 }
 
-export async function getReferenciasLegalesByTipo(tipoRef: "codigo_civil" | "codigo_penal" | "codigo_procesal_civil" | "codigo_procesal_penal" | "rpj" | "jurisprudencia") {
-  const db = await getDb();
-  if (!db) return [];
-  return db.select().from(referenciasLegales).where(eq(referenciasLegales.tipo, tipoRef));
-}
-
-// ============================================================================
-// CONVERSACIONES QUERIES
-// ============================================================================
-
-export async function getConversacionesByUserId(userId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  return db.select().from(conversaciones).where(eq(conversaciones.userId, userId));
-}
-
-export async function getConversacionById(id: number) {
-  const db = await getDb();
-  if (!db) return undefined;
-  const result = await db.select().from(conversaciones).where(eq(conversaciones.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
-}
-
-export async function createConversacion(data: InsertConversacion) {
+export async function createEscrito(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.insert(conversaciones).values(data);
+  await db.insert(escritos).values(data);
 }
 
-export async function updateConversacion(id: number, data: Partial<InsertConversacion>) {
+export async function updateEscrito(id: number, data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.update(conversaciones).set(data).where(eq(conversaciones.id, id));
+  await db.update(escritos).set(data).where(eq(escritos.id, id));
+}
+
+
+export async function deleteExpediente(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(expedientes).where(eq(expedientes.id, id));
+}
+
+export async function getEscritosByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(escritos).where(eq(escritos.userId, userId));
+}
+
+export async function getEscritoById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(escritos).where(eq(escritos.id, id)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function deleteEscrito(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(escritos).where(eq(escritos.id, id));
 }

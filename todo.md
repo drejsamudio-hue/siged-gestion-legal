@@ -151,3 +151,16 @@
 ## Bugs Reportados
 
 - [x] Campos de texto no funcionan correctamente en formularios (CORREGIDO: Removida lógica de composición problemática)
+
+
+## Integración Real con SIGED (Completada)
+
+- [x] Tabla de credenciales encriptadas en base de datos
+- [x] Servicio de scraping con Puppeteer
+- [x] Extracción de novedades del panel de expedientes
+- [x] Extracción de cédulas del casillero
+- [x] Extracción de despachos del sistema
+- [x] Sistema de reintentos (1 reintento)
+- [x] Notificaciones por email en caso de error
+- [x] Validación de credenciales SIGED
+- [x] Tests unitarios para scraper real (32 tests pasando)
