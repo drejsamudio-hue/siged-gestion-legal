@@ -172,6 +172,29 @@ export const appRouter = router({
         return db.updateAlerta(id, data);
       }),
   }),
+
+  sigedScans: router({
+    getLatestScan: protectedProcedure.query(({ ctx }) => {
+      const { sigedScraperService } = require("./services/sigedScraper");
+      return sigedScraperService.obtenerUltimoScan(ctx.user.id);
+    }),
+    getScanDetails: protectedProcedure
+      .input(z.object({ scanId: z.number() }))
+      .query(({ input }) => {
+        const { sigedScraperService } = require("./services/sigedScraper");
+        return sigedScraperService.obtenerNovedadesDelScan(input.scanId);
+      }),
+    generateReport: protectedProcedure
+      .input(z.object({ scanId: z.number() }))
+      .query(({ input }) => {
+        const { reportGeneratorService } = require("./services/reportGenerator");
+        return reportGeneratorService.generarInforme(input.scanId);
+      }),
+    manualScan: protectedProcedure.mutation(({ ctx }) => {
+      const { sigedScraperService } = require("./services/sigedScraper");
+      return sigedScraperService.escanearExpedientes(ctx.user.id);
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

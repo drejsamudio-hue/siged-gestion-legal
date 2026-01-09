@@ -221,3 +221,52 @@ export const conversacionesRelations = relations(conversaciones, ({ one }) => ({
     references: [expedientes.id],
   }),
 }));
+
+// ============================================================================
+// SIGED SCANS (Automatic SIGED Monitoring)
+// ============================================================================
+
+export const sigedScans = mysqlTable("siged_scans", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  fechaScan: timestamp("fechaScan").defaultNow().notNull(),
+  expedientesActualizados: int("expedientesActualizados").default(0),
+  novedadesEncontradas: int("novedadesEncontradas").default(0),
+  estado: mysqlEnum("estado", ["exitoso", "error", "pendiente"]).default("pendiente"),
+  detalles: text("detalles"),
+  emailEnviado: int("emailEnviado").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SigedScan = typeof sigedScans.$inferSelect;
+export type InsertSigedScan = typeof sigedScans.$inferInsert;
+
+export const novedadesExpedientes = mysqlTable("novedades_expedientes", {
+  id: int("id").autoincrement().primaryKey(),
+  scanId: int("scanId").notNull(),
+  expedienteId: int("expedienteId").notNull(),
+  tipoNovedad: varchar("tipoNovedad", { length: 100 }).notNull(),
+  descripcion: text("descripcion"),
+  estrategiaRecomendada: text("estrategiaRecomendada"),
+  escritoSugerido: varchar("escritoSugerido", { length: 100 }),
+  urgencia: mysqlEnum("urgencia", ["baja", "media", "alta", "critica"]).default("media"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type NovedadExpediente = typeof novedadesExpedientes.$inferSelect;
+export type InsertNovedadExpediente = typeof novedadesExpedientes.$inferInsert;
+
+export const sigedScansRelations = relations(sigedScans, ({ many }) => ({
+  novedades: many(novedadesExpedientes),
+}));
+
+export const novedadesRelations = relations(novedadesExpedientes, ({ one }) => ({
+  scan: one(sigedScans, {
+    fields: [novedadesExpedientes.scanId],
+    references: [sigedScans.id],
+  }),
+  expediente: one(expedientes, {
+    fields: [novedadesExpedientes.expedienteId],
+    references: [expedientes.id],
+  }),
+}));

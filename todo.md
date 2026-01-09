@@ -132,3 +132,17 @@
 4. Almacenamiento S3
 5. Búsqueda full-text
 6. Historial persistente de chatbot
+
+
+## Nueva Funcionalidad: Sistema de Escaneo Automático del SIGED
+
+### 11. Escaneo Automático de Novedades
+- [x] Tabla de escaneos en base de datos
+- [x] Servicio de scraping del SIGED
+- [x] Scheduler de ejecución (martes y viernes a 8 AM)
+- [x] Generador de informes con novedades
+- [x] Sugerencias de estrategias por expediente
+- [x] Recomendación de escritos de continuación
+- [x] Sistema de notificaciones por email
+- [x] Historial de escaneos y reportes
+- [ ] Tests unitarios para scraper (En desarrollo)
