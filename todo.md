@@ -146,3 +146,8 @@
 - [x] Sistema de notificaciones por email
 - [x] Historial de escaneos y reportes
 - [ ] Tests unitarios para scraper (En desarrollo)
+
+
+## Bugs Reportados
+
+- [x] Campos de texto no funcionan correctamente en formularios (CORREGIDO: Removida lógica de composición problemática)
