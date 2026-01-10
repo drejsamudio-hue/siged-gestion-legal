@@ -164,3 +164,13 @@
 - [x] Notificaciones por email en caso de error
 - [x] Validación de credenciales SIGED
 - [x] Tests unitarios para scraper real (32 tests pasando)
+
+
+## Scheduler Real con Node-Cron (Completado)
+
+- [x] Servicio de scheduler con validación de período de feria
+- [x] Integración con scraping real del SIGED
+- [x] Procedimientos tRPC para iniciar/detener scheduler
+- [x] Generación automática de informes
+- [x] Notificaciones por email de escaneos
+- [x] Tests unitarios para scheduler (11 tests pasando)

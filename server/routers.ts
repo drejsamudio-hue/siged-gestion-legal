@@ -266,6 +266,32 @@ export const appRouter = router({
         return { success: true };
       }),
   }),
+
+  sigedScheduler: router({
+    iniciar: protectedProcedure.mutation(async ({ ctx }) => {
+      const { getSigedScheduler } = require("./services/sigedSchedulerReal");
+      const scheduler = getSigedScheduler();
+      await scheduler.iniciarScheduler(ctx.user.id);
+      return { success: true, message: "Scheduler iniciado" };
+    }),
+    detener: protectedProcedure.mutation(async ({ ctx }) => {
+      const { getSigedScheduler } = require("./services/sigedSchedulerReal");
+      const scheduler = getSigedScheduler();
+      scheduler.detenerScheduler(ctx.user.id);
+      return { success: true, message: "Scheduler detenido" };
+    }),
+    estado: protectedProcedure.query(async ({ ctx }) => {
+      const { getSigedScheduler } = require("./services/sigedSchedulerReal");
+      const scheduler = getSigedScheduler();
+      return scheduler.obtenerEstado(ctx.user.id);
+    }),
+    escaneoManual: protectedProcedure.mutation(async ({ ctx }) => {
+      const { getSigedScheduler } = require("./services/sigedSchedulerReal");
+      const scheduler = getSigedScheduler();
+      await scheduler.escaneoManual(ctx.user.id);
+      return { success: true, message: "Escaneo manual completado" };
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
