@@ -314,3 +314,62 @@ export const sigedNotificaciones = mysqlTable("siged_notificaciones", {
 
 export type SigedNotificaciones = typeof sigedNotificaciones.$inferSelect;
 export type InsertSigedNotificaciones = typeof sigedNotificaciones.$inferInsert;
+
+/**
+ * Tabla para almacenar credenciales de Justi (PWA del STI del Poder Judicial)
+ */
+export const justiCredentials = mysqlTable("justi_credentials", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  username: text("username").notNull(),
+  password: text("password").notNull(),
+  notificationEmail: varchar("notificationEmail", { length: 320 }).notNull(),
+  lastSuccessfulSync: timestamp("lastSuccessfulSync"),
+  lastSyncError: text("lastSyncError"),
+  isActive: int("isActive").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type JustiCredentials = typeof justiCredentials.$inferSelect;
+export type InsertJustiCredentials = typeof justiCredentials.$inferInsert;
+
+/**
+ * Tabla para almacenar cedulas y notificaciones de Justi
+ */
+export const justiNotificaciones = mysqlTable("justi_notificaciones", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  expedienteId: int("expedienteId"),
+  tipo: varchar("tipo", { length: 50 }).notNull(),
+  titulo: text("titulo").notNull(),
+  contenido: text("contenido"),
+  fechaNotificacion: timestamp("fechaNotificacion"),
+  leida: int("leida").default(0).notNull(),
+  urlJusti: text("urlJusti"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type JustiNotificaciones = typeof justiNotificaciones.$inferSelect;
+export type InsertJustiNotificaciones = typeof justiNotificaciones.$inferInsert;
+
+/**
+ * Tabla para almacenar novedades de expedientes obtenidas desde Justi
+ */
+export const justiNovedades = mysqlTable("justi_novedades", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  numero: varchar("numero", { length: 100 }).notNull(),
+  caratula: text("caratula"),
+  dependencia: varchar("dependencia", { length: 255 }),
+  ultimoMovimiento: text("ultimoMovimiento"),
+  fechaMovimiento: timestamp("fechaMovimiento"),
+  estado: varchar("estado", { length: 20 }).default("normal").notNull(),
+  leida: int("leida").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type JustiNovedades = typeof justiNovedades.$inferSelect;
+export type InsertJustiNovedades = typeof justiNovedades.$inferInsert;

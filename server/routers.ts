@@ -292,6 +292,113 @@ export const appRouter = router({
       return { success: true, message: "Escaneo manual completado" };
     }),
   }),
+
+  justiCredentials: router({
+    save: protectedProcedure
+      .input(
+        z.object({
+          username: z.string(),
+          password: z.string(),
+          notificationEmail: z.string().email(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        await db.saveJustiCredentials(
+          ctx.user.id,
+          input.username,
+          input.password,
+          input.notificationEmail
+        );
+        return { success: true };
+      }),
+    get: protectedProcedure.query(async ({ ctx }) => {
+      const creds = await db.getJustiCredentials(ctx.user.id);
+      if (!creds) return null;
+      return {
+        username: creds.username,
+        notificationEmail: creds.notificationEmail,
+        lastSuccessfulSync: creds.lastSuccessfulSync,
+        lastSyncError: creds.lastSyncError,
+      };
+    }),
+  }),
+
+  justiScanReal: router({
+    scan: protectedProcedure.mutation(async ({ ctx }) => {
+      const creds = await db.getJustiCredentials(ctx.user.id);
+      if (!creds) {
+        throw new Error("Justi credentials not configured");
+      }
+
+      try {
+        const { getJustiScraper } = require("./services/justiScraperReal");
+        const scraper = getJustiScraper();
+        const resultado = await scraper.escaneoCompleto(creds.username, creds.password);
+
+        // Guardar notificaciones en la base de datos
+        for (const cedula of resultado.cedulas) {
+          await db.saveJustiNotificacion({
+            userId: ctx.user.id,
+            tipo: cedula.tipo,
+            titulo: cedula.titulo,
+            contenido: cedula.contenido,
+            fechaNotificacion: new Date(cedula.fecha),
+          });
+        }
+
+        // Guardar novedades de expedientes
+        for (const novedad of resultado.novedades) {
+          await db.saveJustiNovedad({
+            userId: ctx.user.id,
+            numero: novedad.numero,
+            caratula: novedad.caratula,
+            dependencia: novedad.dependencia,
+            ultimoMovimiento: novedad.ultimoMovimiento,
+            fechaMovimiento: new Date(novedad.fechaMovimiento),
+            estado: novedad.estado,
+          });
+        }
+
+        await db.updateJustiSyncStatus(ctx.user.id, true);
+        return { success: true, novedades: resultado.novedades, cedulas: resultado.cedulas };
+      } catch (error: any) {
+        await db.updateJustiSyncStatus(ctx.user.id, false, error.message);
+        throw error;
+      }
+    }),
+    getNotificaciones: protectedProcedure.query(async ({ ctx }) => {
+      return db.getJustiNotificacionesPorUsuario(ctx.user.id, false);
+    }),
+    marcarComoLeida: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.marcarJustiNotificacionComoLeida(input.id);
+        return { success: true };
+      }),
+  }),
+
+  justiScheduler: router({
+    iniciar: protectedProcedure.mutation(async ({ ctx }) => {
+      const { getJustiScheduler } = require("./services/justiSchedulerReal");
+      const scheduler = getJustiScheduler();
+      scheduler.startScheduler("0 8 * * 2,5", ctx.user.id);
+      return { success: true, message: "Justi scheduler iniciado" };
+    }),
+    detener: protectedProcedure.mutation(async ({ ctx }) => {
+      const { getJustiScheduler } = require("./services/justiSchedulerReal");
+      const scheduler = getJustiScheduler();
+      scheduler.stopScheduler();
+      return { success: true, message: "Justi scheduler detenido" };
+    }),
+    estado: protectedProcedure.query(async ({ ctx }) => {
+      const { getJustiScheduler } = require("./services/justiSchedulerReal");
+      const scheduler = getJustiScheduler();
+      return {
+        isRunning: scheduler.isRunning(),
+        config: scheduler.getConfig(),
+      };
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

@@ -361,3 +361,165 @@ export async function deleteEscrito(id: number) {
   if (!db) throw new Error("Database not available");
   await db.delete(escritos).where(eq(escritos.id, id));
 }
+
+// ============================================================================
+// JUSTI CREDENTIALS
+// ============================================================================
+
+export async function saveJustiCredentials(
+  userId: number,
+  username: string,
+  password: string,
+  notificationEmail: string
+): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const encryptedUsername = encryptText(username);
+  const encryptedPassword = encryptText(password);
+
+  const { justiCredentials } = await import("../drizzle/schema");
+  const existing = await db
+    .select()
+    .from(justiCredentials)
+    .where(eq(justiCredentials.userId, userId))
+    .limit(1);
+
+  if (existing.length > 0) {
+    await db
+      .update(justiCredentials)
+      .set({
+        username: encryptedUsername,
+        password: encryptedPassword,
+        notificationEmail,
+        updatedAt: new Date(),
+      })
+      .where(eq(justiCredentials.userId, userId));
+  } else {
+    await db.insert(justiCredentials).values({
+      userId,
+      username: encryptedUsername,
+      password: encryptedPassword,
+      notificationEmail,
+      isActive: 1,
+    });
+  }
+}
+
+export async function getJustiCredentials(userId: number) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { justiCredentials } = await import("../drizzle/schema");
+  const result = await db
+    .select()
+    .from(justiCredentials)
+    .where(and(eq(justiCredentials.userId, userId), eq(justiCredentials.isActive, 1)))
+    .limit(1);
+
+  if (result.length === 0) {
+    return null;
+  }
+
+  const creds = result[0];
+  return {
+    ...creds,
+    username: decryptText(creds.username),
+    password: decryptText(creds.password),
+  };
+}
+
+export async function updateJustiSyncStatus(
+  userId: number,
+  success: boolean,
+  error?: string
+): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { justiCredentials } = await import("../drizzle/schema");
+  const updateData: any = {
+    updatedAt: new Date(),
+  };
+
+  if (success) {
+    updateData.lastSuccessfulSync = new Date();
+    updateData.lastSyncError = null;
+  } else {
+    updateData.lastSyncError = error || "Unknown error";
+  }
+
+  await db
+    .update(justiCredentials)
+    .set(updateData)
+    .where(eq(justiCredentials.userId, userId));
+}
+
+// ============================================================================
+// JUSTI NOTIFICACIONES
+// ============================================================================
+
+export async function saveJustiNotificacion(
+  data: any
+): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { justiNotificaciones } = await import("../drizzle/schema");
+  await db.insert(justiNotificaciones).values(data);
+}
+
+export async function getJustiNotificacionesPorUsuario(userId: number, leidas = false) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { justiNotificaciones } = await import("../drizzle/schema");
+  const result = await db
+    .select()
+    .from(justiNotificaciones)
+    .where(
+      and(
+        eq(justiNotificaciones.userId, userId),
+        eq(justiNotificaciones.leida, leidas ? 1 : 0)
+      )
+    );
+
+  return result;
+}
+
+export async function marcarJustiNotificacionComoLeida(notificacionId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { justiNotificaciones } = await import("../drizzle/schema");
+  await db
+    .update(justiNotificaciones)
+    .set({ leida: 1, updatedAt: new Date() })
+    .where(eq(justiNotificaciones.id, notificacionId));
+}
+
+// ============================================================================
+// JUSTI NOVEDADES
+// ============================================================================
+
+export async function saveJustiNovedad(data: any): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { justiNovedades } = await import("../drizzle/schema");
+  await db.insert(justiNovedades).values(data);
+}
