@@ -432,10 +432,22 @@ export async function updateJustiSyncStatus(
     .where(eq(justiCredentials.userId, userId));
 }
 
-export async function saveJustiNotificacion(data: InsertJustiNotificaciones): Promise<void> {
+/** Guarda la notificación salvo que ya exista una igual (mismo título y fecha) para el usuario. */
+export async function saveJustiNotificacion(data: InsertJustiNotificaciones): Promise<boolean> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+
+  const condiciones = [eq(justiNotificaciones.userId, data.userId), eq(justiNotificaciones.titulo, data.titulo)];
+  if (data.fechaNotificacion) condiciones.push(eq(justiNotificaciones.fechaNotificacion, data.fechaNotificacion));
+  const existing = await db
+    .select({ id: justiNotificaciones.id })
+    .from(justiNotificaciones)
+    .where(and(...condiciones))
+    .limit(1);
+  if (existing.length > 0) return false;
+
   await db.insert(justiNotificaciones).values(data);
+  return true;
 }
 
 export async function getJustiNotificacionesPorUsuario(userId: number, leidas = false) {

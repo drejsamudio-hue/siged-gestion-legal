@@ -36,18 +36,22 @@ export class JustiSchedulerReal {
 
       const resultado = await getJustiScraper().escaneoCompleto(creds.username, creds.password);
 
+      // Justi repite lo de los últimos 7 días en cada consulta: se cuentan solo los registros nuevos.
+      let cedulasNuevas = 0;
       for (const cedula of resultado.cedulas) {
-        await saveJustiNotificacion({
+        const nueva = await saveJustiNotificacion({
           userId,
           tipo: cedula.tipo,
           titulo: cedula.titulo,
           contenido: cedula.contenido,
           fechaNotificacion: parseFecha(cedula.fecha),
         });
+        if (nueva) cedulasNuevas++;
       }
 
+      let novedadesNuevas = 0;
       for (const novedad of resultado.novedades) {
-        await saveJustiNovedad({
+        const nueva = await saveJustiNovedad({
           userId,
           numero: novedad.numero,
           caratula: novedad.caratula,
@@ -56,15 +60,15 @@ export class JustiSchedulerReal {
           fechaMovimiento: parseFecha(novedad.fechaMovimiento),
           estado: novedad.estado,
         });
+        if (nueva) novedadesNuevas++;
       }
 
       await updateJustiSyncStatus(userId, true);
 
-      const total = resultado.novedades.length + resultado.cedulas.length;
-      if (total > 0) {
+      if (novedadesNuevas + cedulasNuevas > 0) {
         await notifyOwner({
           title: "Justi - Nuevas novedades",
-          content: `Justi: ${resultado.novedades.length} novedades de expedientes y ${resultado.cedulas.length} cédulas/despachos para el usuario ${userId}.`,
+          content: `Justi: ${novedadesNuevas} despachos nuevos y ${cedulasNuevas} notificaciones nuevas para el usuario ${userId}.`,
         });
       }
     } catch (error: any) {
@@ -114,10 +118,15 @@ export class JustiSchedulerReal {
   }
 }
 
-/** Acepta ISO o dd/mm/aaaa (formato habitual en los portales judiciales). */
+/**
+ * Acepta dd/mm/aaaa y aaaa-mm-dd (Justi devuelve este último). Las fechas sin hora se toman
+ * como fecha local: `new Date("2026-09-22")` sería UTC y en Argentina mostraría el 21/09.
+ */
 export function parseFecha(texto: string): Date | undefined {
   const m = texto?.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  const iso = texto?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
   const d = new Date(texto);
   return isNaN(d.getTime()) ? undefined : d;
 }

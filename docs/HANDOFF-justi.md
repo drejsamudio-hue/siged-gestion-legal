@@ -13,17 +13,36 @@ Traer automáticamente **novedades de expedientes** (y cédulas/notificaciones) 
 
 ## Estado actual
 
-Listo y verificado (`pnpm check` sin errores, `pnpm test` 50/50):
-- `server/services/justiScraperReal.ts`: un solo login, selectores válidos, reutiliza la sesión (`JUSTI_USER_DATA_DIR`) y captura todas las respuestas JSON de la API de Justi.
-- `server/services/justiSchedulerReal.ts`: martes y viernes a las 8:00; se saltea la feria (enero, más los rangos de `JUSTI_FERIAS`); fechas dd/mm/aaaa; avisa al dueño cuando hay novedades.
+Base hecha en la nube (vigente, ampliada abajo):
+- `server/services/justiSchedulerReal.ts`: martes y viernes a las 8:00; se saltea la feria (enero, más los rangos de `JUSTI_FERIAS`); fechas dd/mm/aaaa y aaaa-mm-dd; avisa al dueño cuando hay novedades nuevas.
 - Routers tRPC `justiCredentials`, `justiScanReal` (`scan`, `getNovedades`, `getNotificaciones`, `marcarComoLeida`) y `justiScheduler`.
 - Tablas `justi_credentials`, `justi_notificaciones` y `justi_novedades`. Las novedades no se duplican si el último movimiento no cambió.
 - `scripts/justi-discover.ts` (`pnpm justi:discover`).
 
-Pendiente, y requiere tu PC:
-1. `pnpm install`, luego `pnpm justi:discover`. Se abre Chrome: te logueás y recorrés Novedades, Expedientes y Notificaciones, después cerrás. Queda `justi-api.json`, que está en `.gitignore` porque tiene datos personales.
-2. Con ese archivo se mapean los endpoints reales a novedades y cédulas en `justiScraperReal.ts` (hoy las novedades salen del DOM y las cédulas vuelven vacías).
-3. `pnpm db:push` contra la base local, para crear las tablas nuevas.
+### API real de Justi (relevada en local el 25/09/2026)
+
+- Login: SSO Keycloak (`idm.jusmisiones.gov.ar`, realm `jusmisiones`, cliente `sso-oid`). La PWA deja `token`, `matricula`, `fullName` y `mail` en `sessionStorage`.
+- `GET /api/apitoken/login/:mail` → `[{ abogado, email, matricula }]`
+- `GET /api/apitoken/notificaciones/:mail` → `[{ cantidad }]` (solo contador, últimos 7 días)
+- `GET /api/apitoken/notificaciones-detalles/:mail` → `numero_expediente, caratula, fecha_envio_notificacion, dependencia, remitente, documento_adjunto`
+- `GET /api/apitoken/despachos/:mail` → agrupado por `fecha` con `items: [{ id_despacho, nro_expediente, dependencia_nombre, secretaria_nombre, descripcion_tipo_despacho, designacion, sale_con }]`
+- El mail va sin codificar en la URL (codificado, el backend responde "El usuario y el Token no son correspondientes").
+- Justi **no** expone movimientos de expediente en general: solo despachos del usuario vinculado y notificaciones SIGED de 7 días.
+
+### Hecho en local (25/09/2026)
+
+- `justiScraperReal.ts` usa la API: abre `Despachos/:mail` y `NotificacionesSiged/:mail` con el perfil logueado y lee el JSON que recibe la PWA (no manipula el token). Despachos → `justi_novedades`; notificaciones detalladas → `justi_notificaciones`.
+- Login Keycloak (`#username`, `#password`, `#kc-login`) si el perfil no tiene sesión.
+- `parseFecha` toma `aaaa-mm-dd` como fecha local (antes corría al día anterior).
+- Cédulas deduplicadas por título + fecha; el aviso cuenta solo registros nuevos.
+- `routers.ts`: se reemplazaron los `require()` de SIGED por imports estáticos (fallaban en ESM).
+- `pnpm check` sin errores; `pnpm test` 57/57.
+
+### Pendiente
+
+1. **Base de datos:** no hay motor usable en la PC (Postgres 18 quedó a medio desinstalar: solo `data\`, sin binarios ni servicio; no hay Docker). Hay que elegir motor antes de `pnpm db:push` (ver abajo).
+2. **Prueba end-to-end del scraper** una vez que haya base: `pnpm justi:discover` una vez para dejar la sesión en `.justi-profile`, después escaneo manual desde la app.
+3. `notificaciones-detalles` no se pudo ver con datos (0 notificaciones en la semana); el mapeo sale del código de la PWA. Validar cuando haya una.
 
 Variables de entorno:
 - `JUSTI_USER_DATA_DIR=.justi-profile`: reutiliza la sesión guardada por el script de descubrimiento.
