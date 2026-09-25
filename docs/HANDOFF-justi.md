@@ -38,11 +38,27 @@ Base hecha en la nube (vigente, ampliada abajo):
 - `routers.ts`: se reemplazaron los `require()` de SIGED por imports estáticos (fallaban en ESM).
 - `pnpm check` sin errores; `pnpm test` 57/57.
 
+### Base de datos — usar Docker
+
+No hay motor de base corriendo en tu PC hoy. La forma más fácil: **Docker Desktop** + `docker-compose.yml`.
+
+1. **Instala Docker Desktop** desde https://www.docker.com/products/docker-desktop (15 min, reinicia).
+2. En la carpeta del proyecto:
+   ```powershell
+   docker-compose up -d
+   ```
+   Eso levanta MySQL 8.4 sin contraseña, escuchando en localhost:3306.
+3. `pnpm db:push` crea las tablas.
+4. Para parar: `docker-compose down`.
+
+Si no querés Docker, la alternativa es instalar MySQL 8 manualmente en Windows (sin Docker): el `.env` ya está listo, solo hay que levantar el servicio.
+
 ### Pendiente
 
-1. **Base de datos:** no hay motor usable en la PC (Postgres 18 quedó a medio desinstalar: solo `data\`, sin binarios ni servicio; no hay Docker). Hay que elegir motor antes de `pnpm db:push` (ver abajo).
-2. **Prueba end-to-end del scraper** una vez que haya base: `pnpm justi:discover` una vez para dejar la sesión en `.justi-profile`, después escaneo manual desde la app.
-3. `notificaciones-detalles` no se pudo ver con datos (0 notificaciones en la semana); el mapeo sale del código de la PWA. Validar cuando haya una.
+1. **Prueba end-to-end del scraper** una vez que haya base: 
+   - `pnpm justi:discover` una sola vez (abre Chrome, te logueás, cierra) → guarda sesión en `.justi-profile`.
+   - Después `pnpm scan` desde la app.
+2. `notificaciones-detalles` no se pudo ver con datos (0 notificaciones esta semana); el mapeo sale del código de la PWA. Validar cuando haya una.
 
 Variables de entorno:
 - `JUSTI_USER_DATA_DIR=.justi-profile`: reutiliza la sesión guardada por el script de descubrimiento.
