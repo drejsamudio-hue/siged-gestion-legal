@@ -11,37 +11,24 @@ Traer automáticamente **novedades de expedientes** (y cédulas/notificaciones) 
 - **App Android en la red local**: el celular (192.168.1.10, Motorola) no expone puertos (nmap: todo cerrado). No hay API local.
 - **Acceso desde la sesión en la nube**: el proxy bloquea `pwa.jusmisiones.gov.ar`. **Hay que seguir en local.**
 
-## Qué quedó hecho (borrador, SIN probar)
+## Estado actual
 
-| Archivo | Estado |
-|---|---|
-| `server/services/justiScraperReal.ts` | Scraper Puppeteer. Selectores **inventados**: nunca se vio el sitio real. |
-| `server/services/justiSchedulerReal.ts` | **Roto**: importa módulos que no existen (`../_core/schema`, `db` y `sendNotificationEmail`). Hay que reescribirlo copiando `sigedSchedulerReal.ts`. |
-| `server/routers.ts` | Routers `justiCredentials`, `justiScanReal` y `justiScheduler`. |
-| `server/db.ts` | Funciones CRUD de Justi (credenciales, notificaciones, novedades). |
-| `drizzle/schema.ts` | Tablas `justi_credentials`, `justi_notificaciones` y `justi_novedades` (MySQL). |
+Listo y verificado (`pnpm check` sin errores, `pnpm test` 50/50):
+- `server/services/justiScraperReal.ts`: un solo login, selectores válidos, reutiliza la sesión (`JUSTI_USER_DATA_DIR`) y captura todas las respuestas JSON de la API de Justi.
+- `server/services/justiSchedulerReal.ts`: martes y viernes a las 8:00; se saltea la feria (enero, más los rangos de `JUSTI_FERIAS`); fechas dd/mm/aaaa; avisa al dueño cuando hay novedades.
+- Routers tRPC `justiCredentials`, `justiScanReal` (`scan`, `getNovedades`, `getNotificaciones`, `marcarComoLeida`) y `justiScheduler`.
+- Tablas `justi_credentials`, `justi_notificaciones` y `justi_novedades`. Las novedades no se duplican si el último movimiento no cambió.
+- `scripts/justi-discover.ts` (`pnpm justi:discover`).
 
-### Problemas conocidos a corregir
-1. `button:contains(...)` no es un selector CSS válido: Puppeteer tira error. Hay que usar `::-p-text(...)` o XPath.
-2. `escaneoCompleto` hace **dos logins en paralelo** (novedades + cédulas). Conviene un solo login y una sola página.
-3. El scheduler tiene mal el calendario de feria/feriados: ahí dice julio completo, y la feria de invierno dura unas 2 semanas. Conviene usar la lógica que ya tiene `sigedSchedulerReal.ts` o el skill `plazos-procesales`.
-4. `userId` figura como `string` en el scheduler, pero en la base es `number`.
-5. Los routers usan `require()` en un proyecto ESM (`"type": "module"`). Pasa lo mismo con SIGED: hay que revisarlo y cambiarlo por `await import()`.
+Pendiente, y requiere tu PC:
+1. `pnpm install`, luego `pnpm justi:discover`. Se abre Chrome: te logueás y recorrés Novedades, Expedientes y Notificaciones, después cerrás. Queda `justi-api.json`, que está en `.gitignore` porque tiene datos personales.
+2. Con ese archivo se mapean los endpoints reales a novedades y cédulas en `justiScraperReal.ts` (hoy las novedades salen del DOM y las cédulas vuelven vacías).
+3. `pnpm db:push` contra la base local, para crear las tablas nuevas.
 
-## Enfoque recomendado (antes de tocar selectores)
-
-Justi es una SPA: seguramente consume una API JSON propia. **Interceptar esa API es mucho más robusto que parsear el HTML.**
-
-1. Correr Puppeteer con `headless: false` y loguearse a mano (así se evita el CAPTCHA o el 2FA si los hay).
-2. Registrar las respuestas XHR/fetch:
-   ```ts
-   page.on("response", async r => {
-     const ct = r.headers()["content-type"] || "";
-     if (ct.includes("json")) console.log(r.request().method(), r.url(), (await r.text()).slice(0, 500));
-   });
-   ```
-3. Identificar los endpoints de novedades y notificaciones y el mecanismo de auth (token en `localStorage`, cookie o `Authorization: Bearer`).
-4. Reemplazar el scraping de DOM por llamadas directas a esa API, usando el token obtenido con el login. Si el login no es automatizable, usar `userDataDir` para reutilizar la sesión.
+Variables de entorno:
+- `JUSTI_USER_DATA_DIR=.justi-profile`: reutiliza la sesión guardada por el script de descubrimiento.
+- `JUSTI_HEADLESS=false`: muestra el navegador mientras corre.
+- `JUSTI_FERIAS=2026-07-13:2026-07-24`: rangos de feria de invierno según la acordada del STJ. Verificar las fechas.
 
 ## PostgreSQL local: ¿conviene?
 

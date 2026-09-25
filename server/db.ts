@@ -1,6 +1,6 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, expedientes, notas, escritos, alertas, sigedCredentials, sigedNotificaciones, InsertSigedCredentials, InsertSigedNotificaciones } from "../drizzle/schema";
+import { InsertUser, users, expedientes, notas, escritos, alertas, sigedCredentials, sigedNotificaciones, InsertSigedCredentials, InsertSigedNotificaciones, justiCredentials, justiNotificaciones, justiNovedades, InsertJustiNotificaciones, InsertJustiNovedades } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { encryptText, decryptText } from "./services/encryptionService";
 
@@ -363,7 +363,7 @@ export async function deleteEscrito(id: number) {
 }
 
 // ============================================================================
-// JUSTI CREDENTIALS
+// JUSTI (PWA del Poder Judicial de Misiones)
 // ============================================================================
 
 export async function saveJustiCredentials(
@@ -373,57 +373,38 @@ export async function saveJustiCredentials(
   notificationEmail: string
 ): Promise<void> {
   const db = await getDb();
-  if (!db) {
-    throw new Error("Database not available");
-  }
+  if (!db) throw new Error("Database not available");
 
-  const encryptedUsername = encryptText(username);
-  const encryptedPassword = encryptText(password);
+  const values = {
+    username: encryptText(username),
+    password: encryptText(password),
+    notificationEmail,
+  };
 
-  const { justiCredentials } = await import("../drizzle/schema");
   const existing = await db
-    .select()
+    .select({ id: justiCredentials.id })
     .from(justiCredentials)
     .where(eq(justiCredentials.userId, userId))
     .limit(1);
 
   if (existing.length > 0) {
-    await db
-      .update(justiCredentials)
-      .set({
-        username: encryptedUsername,
-        password: encryptedPassword,
-        notificationEmail,
-        updatedAt: new Date(),
-      })
-      .where(eq(justiCredentials.userId, userId));
+    await db.update(justiCredentials).set(values).where(eq(justiCredentials.userId, userId));
   } else {
-    await db.insert(justiCredentials).values({
-      userId,
-      username: encryptedUsername,
-      password: encryptedPassword,
-      notificationEmail,
-      isActive: 1,
-    });
+    await db.insert(justiCredentials).values({ userId, ...values, isActive: 1 });
   }
 }
 
 export async function getJustiCredentials(userId: number) {
   const db = await getDb();
-  if (!db) {
-    throw new Error("Database not available");
-  }
+  if (!db) throw new Error("Database not available");
 
-  const { justiCredentials } = await import("../drizzle/schema");
   const result = await db
     .select()
     .from(justiCredentials)
     .where(and(eq(justiCredentials.userId, userId), eq(justiCredentials.isActive, 1)))
     .limit(1);
 
-  if (result.length === 0) {
-    return null;
-  }
+  if (result.length === 0) return null;
 
   const creds = result[0];
   return {
@@ -439,87 +420,71 @@ export async function updateJustiSyncStatus(
   error?: string
 ): Promise<void> {
   const db = await getDb();
-  if (!db) {
-    throw new Error("Database not available");
-  }
-
-  const { justiCredentials } = await import("../drizzle/schema");
-  const updateData: any = {
-    updatedAt: new Date(),
-  };
-
-  if (success) {
-    updateData.lastSuccessfulSync = new Date();
-    updateData.lastSyncError = null;
-  } else {
-    updateData.lastSyncError = error || "Unknown error";
-  }
+  if (!db) throw new Error("Database not available");
 
   await db
     .update(justiCredentials)
-    .set(updateData)
+    .set(
+      success
+        ? { lastSuccessfulSync: new Date(), lastSyncError: null }
+        : { lastSyncError: error || "Unknown error" }
+    )
     .where(eq(justiCredentials.userId, userId));
 }
 
-// ============================================================================
-// JUSTI NOTIFICACIONES
-// ============================================================================
-
-export async function saveJustiNotificacion(
-  data: any
-): Promise<void> {
+export async function saveJustiNotificacion(data: InsertJustiNotificaciones): Promise<void> {
   const db = await getDb();
-  if (!db) {
-    throw new Error("Database not available");
-  }
-
-  const { justiNotificaciones } = await import("../drizzle/schema");
+  if (!db) throw new Error("Database not available");
   await db.insert(justiNotificaciones).values(data);
 }
 
 export async function getJustiNotificacionesPorUsuario(userId: number, leidas = false) {
   const db = await getDb();
-  if (!db) {
-    throw new Error("Database not available");
-  }
+  if (!db) throw new Error("Database not available");
 
-  const { justiNotificaciones } = await import("../drizzle/schema");
-  const result = await db
+  return db
     .select()
     .from(justiNotificaciones)
-    .where(
-      and(
-        eq(justiNotificaciones.userId, userId),
-        eq(justiNotificaciones.leida, leidas ? 1 : 0)
-      )
-    );
-
-  return result;
+    .where(and(eq(justiNotificaciones.userId, userId), eq(justiNotificaciones.leida, leidas ? 1 : 0)));
 }
 
 export async function marcarJustiNotificacionComoLeida(notificacionId: number): Promise<void> {
   const db = await getDb();
-  if (!db) {
-    throw new Error("Database not available");
-  }
+  if (!db) throw new Error("Database not available");
 
-  const { justiNotificaciones } = await import("../drizzle/schema");
   await db
     .update(justiNotificaciones)
-    .set({ leida: 1, updatedAt: new Date() })
+    .set({ leida: 1 })
     .where(eq(justiNotificaciones.id, notificacionId));
 }
 
-// ============================================================================
-// JUSTI NOVEDADES
-// ============================================================================
-
-export async function saveJustiNovedad(data: any): Promise<void> {
+/** Guarda la novedad solo si ese expediente no tiene ya registrado el mismo último movimiento. */
+export async function saveJustiNovedad(data: InsertJustiNovedades): Promise<boolean> {
   const db = await getDb();
-  if (!db) {
-    throw new Error("Database not available");
+  if (!db) throw new Error("Database not available");
+
+  const existing = await db
+    .select({ id: justiNovedades.id, ultimoMovimiento: justiNovedades.ultimoMovimiento })
+    .from(justiNovedades)
+    .where(and(eq(justiNovedades.userId, data.userId), eq(justiNovedades.numero, data.numero)))
+    .orderBy(desc(justiNovedades.id))
+    .limit(1);
+
+  if (existing.length > 0 && existing[0].ultimoMovimiento === (data.ultimoMovimiento ?? null)) {
+    return false;
   }
 
-  const { justiNovedades } = await import("../drizzle/schema");
   await db.insert(justiNovedades).values(data);
+  return true;
+}
+
+export async function getJustiNovedadesPorUsuario(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return db
+    .select()
+    .from(justiNovedades)
+    .where(eq(justiNovedades.userId, userId))
+    .orderBy(desc(justiNovedades.id));
 }

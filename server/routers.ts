@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
+import { getJustiScheduler } from "./services/justiSchedulerReal";
 
 export const appRouter = router({
   system: systemRouter,
@@ -325,50 +326,20 @@ export const appRouter = router({
 
   justiScanReal: router({
     scan: protectedProcedure.mutation(async ({ ctx }) => {
-      const creds = await db.getJustiCredentials(ctx.user.id);
-      if (!creds) {
+      if (!(await db.getJustiCredentials(ctx.user.id))) {
         throw new Error("Justi credentials not configured");
       }
-
-      try {
-        const { getJustiScraper } = require("./services/justiScraperReal");
-        const scraper = getJustiScraper();
-        const resultado = await scraper.escaneoCompleto(creds.username, creds.password);
-
-        // Guardar notificaciones en la base de datos
-        for (const cedula of resultado.cedulas) {
-          await db.saveJustiNotificacion({
-            userId: ctx.user.id,
-            tipo: cedula.tipo,
-            titulo: cedula.titulo,
-            contenido: cedula.contenido,
-            fechaNotificacion: new Date(cedula.fecha),
-          });
-        }
-
-        // Guardar novedades de expedientes
-        for (const novedad of resultado.novedades) {
-          await db.saveJustiNovedad({
-            userId: ctx.user.id,
-            numero: novedad.numero,
-            caratula: novedad.caratula,
-            dependencia: novedad.dependencia,
-            ultimoMovimiento: novedad.ultimoMovimiento,
-            fechaMovimiento: new Date(novedad.fechaMovimiento),
-            estado: novedad.estado,
-          });
-        }
-
-        await db.updateJustiSyncStatus(ctx.user.id, true);
-        return { success: true, novedades: resultado.novedades, cedulas: resultado.cedulas };
-      } catch (error: any) {
-        await db.updateJustiSyncStatus(ctx.user.id, false, error.message);
-        throw error;
-      }
+      await getJustiScheduler().escaneoManual(ctx.user.id);
+      const creds = await db.getJustiCredentials(ctx.user.id);
+      if (creds?.lastSyncError) throw new Error(creds.lastSyncError);
+      return { success: true };
     }),
-    getNotificaciones: protectedProcedure.query(async ({ ctx }) => {
-      return db.getJustiNotificacionesPorUsuario(ctx.user.id, false);
-    }),
+    getNovedades: protectedProcedure.query(({ ctx }) =>
+      db.getJustiNovedadesPorUsuario(ctx.user.id)
+    ),
+    getNotificaciones: protectedProcedure.query(({ ctx }) =>
+      db.getJustiNotificacionesPorUsuario(ctx.user.id, false)
+    ),
     marcarComoLeida: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
@@ -379,25 +350,16 @@ export const appRouter = router({
 
   justiScheduler: router({
     iniciar: protectedProcedure.mutation(async ({ ctx }) => {
-      const { getJustiScheduler } = require("./services/justiSchedulerReal");
-      const scheduler = getJustiScheduler();
-      scheduler.startScheduler("0 8 * * 2,5", ctx.user.id);
+      await getJustiScheduler().iniciarScheduler(ctx.user.id);
       return { success: true, message: "Justi scheduler iniciado" };
     }),
-    detener: protectedProcedure.mutation(async ({ ctx }) => {
-      const { getJustiScheduler } = require("./services/justiSchedulerReal");
-      const scheduler = getJustiScheduler();
-      scheduler.stopScheduler();
+    detener: protectedProcedure.mutation(({ ctx }) => {
+      getJustiScheduler().detenerScheduler(ctx.user.id);
       return { success: true, message: "Justi scheduler detenido" };
     }),
-    estado: protectedProcedure.query(async ({ ctx }) => {
-      const { getJustiScheduler } = require("./services/justiSchedulerReal");
-      const scheduler = getJustiScheduler();
-      return {
-        isRunning: scheduler.isRunning(),
-        config: scheduler.getConfig(),
-      };
-    }),
+    estado: protectedProcedure.query(({ ctx }) =>
+      getJustiScheduler().obtenerEstado(ctx.user.id)
+    ),
   }),
 });
 
