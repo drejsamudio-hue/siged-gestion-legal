@@ -1,6 +1,6 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, expedientes, notas, escritos, alertas, sigedCredentials, sigedNotificaciones, InsertSigedCredentials, InsertSigedNotificaciones } from "../drizzle/schema";
+import { InsertUser, users, expedientes, notas, escritos, alertas, sigedCredentials, sigedNotificaciones, InsertSigedCredentials, InsertSigedNotificaciones, justiCredentials, justiNotificaciones, justiNovedades, InsertJustiNotificaciones, InsertJustiNovedades } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { encryptText, decryptText } from "./services/encryptionService";
 
@@ -360,4 +360,143 @@ export async function deleteEscrito(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(escritos).where(eq(escritos.id, id));
+}
+
+// ============================================================================
+// JUSTI (PWA del Poder Judicial de Misiones)
+// ============================================================================
+
+export async function saveJustiCredentials(
+  userId: number,
+  username: string,
+  password: string,
+  notificationEmail: string
+): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const values = {
+    username: encryptText(username),
+    password: encryptText(password),
+    notificationEmail,
+  };
+
+  const existing = await db
+    .select({ id: justiCredentials.id })
+    .from(justiCredentials)
+    .where(eq(justiCredentials.userId, userId))
+    .limit(1);
+
+  if (existing.length > 0) {
+    await db.update(justiCredentials).set(values).where(eq(justiCredentials.userId, userId));
+  } else {
+    await db.insert(justiCredentials).values({ userId, ...values, isActive: 1 });
+  }
+}
+
+export async function getJustiCredentials(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db
+    .select()
+    .from(justiCredentials)
+    .where(and(eq(justiCredentials.userId, userId), eq(justiCredentials.isActive, 1)))
+    .limit(1);
+
+  if (result.length === 0) return null;
+
+  const creds = result[0];
+  return {
+    ...creds,
+    username: decryptText(creds.username),
+    password: decryptText(creds.password),
+  };
+}
+
+export async function updateJustiSyncStatus(
+  userId: number,
+  success: boolean,
+  error?: string
+): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .update(justiCredentials)
+    .set(
+      success
+        ? { lastSuccessfulSync: new Date(), lastSyncError: null }
+        : { lastSyncError: error || "Unknown error" }
+    )
+    .where(eq(justiCredentials.userId, userId));
+}
+
+/** Guarda la notificación salvo que ya exista una igual (mismo título y fecha) para el usuario. */
+export async function saveJustiNotificacion(data: InsertJustiNotificaciones): Promise<boolean> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const condiciones = [eq(justiNotificaciones.userId, data.userId), eq(justiNotificaciones.titulo, data.titulo)];
+  if (data.fechaNotificacion) condiciones.push(eq(justiNotificaciones.fechaNotificacion, data.fechaNotificacion));
+  const existing = await db
+    .select({ id: justiNotificaciones.id })
+    .from(justiNotificaciones)
+    .where(and(...condiciones))
+    .limit(1);
+  if (existing.length > 0) return false;
+
+  await db.insert(justiNotificaciones).values(data);
+  return true;
+}
+
+export async function getJustiNotificacionesPorUsuario(userId: number, leidas = false) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return db
+    .select()
+    .from(justiNotificaciones)
+    .where(and(eq(justiNotificaciones.userId, userId), eq(justiNotificaciones.leida, leidas ? 1 : 0)));
+}
+
+export async function marcarJustiNotificacionComoLeida(notificacionId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .update(justiNotificaciones)
+    .set({ leida: 1 })
+    .where(eq(justiNotificaciones.id, notificacionId));
+}
+
+/** Guarda la novedad solo si ese expediente no tiene ya registrado el mismo último movimiento. */
+export async function saveJustiNovedad(data: InsertJustiNovedades): Promise<boolean> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const existing = await db
+    .select({ id: justiNovedades.id, ultimoMovimiento: justiNovedades.ultimoMovimiento })
+    .from(justiNovedades)
+    .where(and(eq(justiNovedades.userId, data.userId), eq(justiNovedades.numero, data.numero)))
+    .orderBy(desc(justiNovedades.id))
+    .limit(1);
+
+  if (existing.length > 0 && existing[0].ultimoMovimiento === (data.ultimoMovimiento ?? null)) {
+    return false;
+  }
+
+  await db.insert(justiNovedades).values(data);
+  return true;
+}
+
+export async function getJustiNovedadesPorUsuario(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return db
+    .select()
+    .from(justiNovedades)
+    .where(eq(justiNovedades.userId, userId))
+    .orderBy(desc(justiNovedades.id));
 }

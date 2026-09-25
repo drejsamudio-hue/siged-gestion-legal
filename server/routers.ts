@@ -4,6 +4,11 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
+import { getJustiScheduler } from "./services/justiSchedulerReal";
+import { sigedScraperService } from "./services/sigedScraper";
+import { reportGeneratorService } from "./services/reportGenerator";
+import { getSigedScraper } from "./services/sigedScraperReal";
+import { getSigedScheduler } from "./services/sigedSchedulerReal";
 
 export const appRouter = router({
   system: systemRouter,
@@ -175,23 +180,19 @@ export const appRouter = router({
 
   sigedScans: router({
     getLatestScan: protectedProcedure.query(({ ctx }) => {
-      const { sigedScraperService } = require("./services/sigedScraper");
       return sigedScraperService.obtenerUltimoScan(ctx.user.id);
     }),
     getScanDetails: protectedProcedure
       .input(z.object({ scanId: z.number() }))
       .query(({ input }) => {
-        const { sigedScraperService } = require("./services/sigedScraper");
         return sigedScraperService.obtenerNovedadesDelScan(input.scanId);
       }),
     generateReport: protectedProcedure
       .input(z.object({ scanId: z.number() }))
       .query(({ input }) => {
-        const { reportGeneratorService } = require("./services/reportGenerator");
         return reportGeneratorService.generarInforme(input.scanId);
       }),
     manualScan: protectedProcedure.mutation(({ ctx }) => {
-      const { sigedScraperService } = require("./services/sigedScraper");
       return sigedScraperService.escanearExpedientes(ctx.user.id);
     }),
   }),
@@ -234,7 +235,6 @@ export const appRouter = router({
       }
 
       try {
-        const { getSigedScraper } = require("./services/sigedScraperReal");
         const scraper = getSigedScraper();
         const resultado = await scraper.escaneoCompleto(creds.username, creds.password);
 
@@ -269,28 +269,92 @@ export const appRouter = router({
 
   sigedScheduler: router({
     iniciar: protectedProcedure.mutation(async ({ ctx }) => {
-      const { getSigedScheduler } = require("./services/sigedSchedulerReal");
       const scheduler = getSigedScheduler();
       await scheduler.iniciarScheduler(ctx.user.id);
       return { success: true, message: "Scheduler iniciado" };
     }),
     detener: protectedProcedure.mutation(async ({ ctx }) => {
-      const { getSigedScheduler } = require("./services/sigedSchedulerReal");
       const scheduler = getSigedScheduler();
       scheduler.detenerScheduler(ctx.user.id);
       return { success: true, message: "Scheduler detenido" };
     }),
     estado: protectedProcedure.query(async ({ ctx }) => {
-      const { getSigedScheduler } = require("./services/sigedSchedulerReal");
       const scheduler = getSigedScheduler();
       return scheduler.obtenerEstado(ctx.user.id);
     }),
     escaneoManual: protectedProcedure.mutation(async ({ ctx }) => {
-      const { getSigedScheduler } = require("./services/sigedSchedulerReal");
       const scheduler = getSigedScheduler();
       await scheduler.escaneoManual(ctx.user.id);
       return { success: true, message: "Escaneo manual completado" };
     }),
+  }),
+
+  justiCredentials: router({
+    save: protectedProcedure
+      .input(
+        z.object({
+          username: z.string(),
+          password: z.string(),
+          notificationEmail: z.string().email(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        await db.saveJustiCredentials(
+          ctx.user.id,
+          input.username,
+          input.password,
+          input.notificationEmail
+        );
+        return { success: true };
+      }),
+    get: protectedProcedure.query(async ({ ctx }) => {
+      const creds = await db.getJustiCredentials(ctx.user.id);
+      if (!creds) return null;
+      return {
+        username: creds.username,
+        notificationEmail: creds.notificationEmail,
+        lastSuccessfulSync: creds.lastSuccessfulSync,
+        lastSyncError: creds.lastSyncError,
+      };
+    }),
+  }),
+
+  justiScanReal: router({
+    scan: protectedProcedure.mutation(async ({ ctx }) => {
+      if (!(await db.getJustiCredentials(ctx.user.id))) {
+        throw new Error("Justi credentials not configured");
+      }
+      await getJustiScheduler().escaneoManual(ctx.user.id);
+      const creds = await db.getJustiCredentials(ctx.user.id);
+      if (creds?.lastSyncError) throw new Error(creds.lastSyncError);
+      return { success: true };
+    }),
+    getNovedades: protectedProcedure.query(({ ctx }) =>
+      db.getJustiNovedadesPorUsuario(ctx.user.id)
+    ),
+    getNotificaciones: protectedProcedure.query(({ ctx }) =>
+      db.getJustiNotificacionesPorUsuario(ctx.user.id, false)
+    ),
+    marcarComoLeida: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.marcarJustiNotificacionComoLeida(input.id);
+        return { success: true };
+      }),
+  }),
+
+  justiScheduler: router({
+    iniciar: protectedProcedure.mutation(async ({ ctx }) => {
+      await getJustiScheduler().iniciarScheduler(ctx.user.id);
+      return { success: true, message: "Justi scheduler iniciado" };
+    }),
+    detener: protectedProcedure.mutation(({ ctx }) => {
+      getJustiScheduler().detenerScheduler(ctx.user.id);
+      return { success: true, message: "Justi scheduler detenido" };
+    }),
+    estado: protectedProcedure.query(({ ctx }) =>
+      getJustiScheduler().obtenerEstado(ctx.user.id)
+    ),
   }),
 });
 

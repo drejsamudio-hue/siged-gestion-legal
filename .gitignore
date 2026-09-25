@@ -105,3 +105,7 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+
+# Justi: perfil de sesión y capturas locales (contienen datos personales)
+.justi-profile/
+justi-api.json
