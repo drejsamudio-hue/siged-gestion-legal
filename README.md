@@ -19,9 +19,13 @@ Ordena en carpetas por causa los PDFs y documentos de tu estudio. Corre en tu co
 
 Si Windows muestra "Windows protegió su PC", elegí "Más información" y "Ejecutar de todos modos": el programa no está firmado digitalmente.
 
+El paquete `Organizador-<versión>.zip` trae, además del `.exe`: `Organizador.exe.sha256` (para verificar que el archivo no fue alterado), las licencias (`THIRD_PARTY_NOTICES.md` y la AGPL-3.0) y el código fuente. Para verificar la huella en Windows: `certutil -hashfile Organizador.exe SHA256` y comparar con el contenido de `Organizador.exe.sha256`.
+
 **Lectura de PDFs escaneados (OCR):** no viene incluida. La primera vez que la necesites, abrí "Configuración" (abajo a la izquierda) y tocá "Instalar OCR en español". El programa baja el idioma español (2,3 MB) del repositorio oficial de Tesseract, <https://github.com/tesseract-ocr/tessdata_fast>, y lo guarda en `%APPDATA%\Organizador\tessdata`. Solo se conecta a internet cuando tocás ese botón. Sin OCR, todo lo demás funciona; solo los PDFs que son imágenes quedan como "sin texto".
 
-**Desde el código** (si preferís no usar el `.exe`): hace falta [Python 3.10 o superior](https://www.python.org/downloads/) con "Add python.exe to PATH" tildado. Después `pip install -r requirements.txt` y doble clic en `iniciar.bat`. Para generar el `.exe` propio: `construir_exe.bat`.
+**Desde el código** (si preferís no usar el `.exe`): hace falta [Python 3.10 o superior](https://www.python.org/downloads/) con "Add python.exe to PATH" tildado. Después `pip install -r requirements.txt` y doble clic en `iniciar.bat`. Para correr los tests: `pip install -r requirements-dev.txt` y `python -m pytest app\tests`.
+
+Para generar el `.exe` propio: `construir_exe.bat`. El script instala las dependencias, **corre los tests** (si fallan, no arma nada), genera `dist\Organizador.exe`, calcula su SHA-256 y deja todo listo para compartir en `dist\Organizador-<versión>.zip`, incluyendo la fuente que exige la licencia.
 
 ## Primera configuración
 
@@ -61,6 +65,11 @@ Todo vive dentro de tu carpeta base:
 - Detecta el número de expediente con el formato `NNNN/AAAA` (también `NNNN-AAAA` o `NNNN_AAAA`, años 1980 a 2035). Si tu jurisdicción numera distinto, usá el patrón propio.
 - La clasificación de jurisprudencia y doctrina está pensada para fallos argentinos.
 - Es una ayuda para ordenar: **antes de mover documentos importantes, hacé una copia de seguridad**.
+
+## Licencia
+
+- **El Organizador** (`app/`, `Organizador.spec`, los `.bat` y `requirements*.txt`) es software libre bajo **GNU AGPL v3.0** (texto completo en `app/LICENSE`). La razón: la librería que lee los PDFs y hace el OCR (PyMuPDF/MuPDF) es AGPL-3.0. En criollo: podés usarlo, compartirlo y modificarlo gratis, pero si lo repartís (por ejemplo, el `.exe` a colegas) tenés que dar también el código fuente bajo la misma licencia. Por eso cada `Organizador-<versión>.zip` generado con `construir_exe.bat` ya incluye la fuente. Detalle de todas las licencias de terceros en `THIRD_PARTY_NOTICES.md`.
+- **SIGED Gestión Legal** (el resto del repo: `client/`, `server/`, `shared/`, `drizzle/`, `scripts/`) es **MIT** (texto en `LICENSE`).
 
 ## Variables de entorno (opcional)
 

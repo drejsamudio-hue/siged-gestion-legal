@@ -1,0 +1,4 @@
+# Dependencias de desarrollo y de armado del .exe
+-r requirements.txt
+pytest
+pyinstaller
