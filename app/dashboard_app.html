@@ -1,0 +1,1491 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Organizador</title>
+<link rel="stylesheet" href="/static/fonts/fonts.css">
+<style>
+/* ── TOKENS ── */
+:root {
+  /* Light: papel legal — crema profunda + tinta naval */
+  --bg: #F2EDE4;
+  --surface: #FAF8F5;
+  --ink: #0E1B30;
+  --ink-2: #3B5070;
+  --ink-muted: #4E6886;
+  --grid: #DDDAD3;
+  --border: rgba(14,27,48,0.08);
+  --accent: #1254A8;
+  --accent-bright: #2B7FE6;
+  --accent-wash: rgba(18,84,168,0.08);
+  --sb-bg: #0A1628;
+  --sb-ink: #B0C8E8;
+  --sb-ink-muted: #7898B8;
+  --cat-1: #1254A8;
+  --cat-2: #B84020;
+  --cat-3: #1A7052;
+  --cat-4: #A07010;
+  --cat-5: #7040A0;
+  --good: #1A7052;
+  --good-wash: rgba(26,112,82,0.10);
+  --warn: #A07010;
+  --warn-wash: rgba(160,112,16,0.10);
+  --crit: #B83028;
+  --crit-wash: rgba(184,48,40,0.10);
+  --radius: 4px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    /* Dark: plano técnico — azul noche profundo */
+    --bg: #06101E;
+    --surface: #0D1B2E;
+    --ink: #C8DDEF;
+    --ink-2: #7098BA;
+    --ink-muted: #7898B8;
+    --grid: #142038;
+    --border: rgba(255,255,255,0.06);
+    --accent: #3A90F0;
+    --accent-bright: #60B0FF;
+    --accent-wash: rgba(58,144,240,0.12);
+    --sb-bg: #040C18;
+    --sb-ink: #90B8D8;
+    --sb-ink-muted: #6888A8;
+    --cat-1: #3A90F0;
+    --cat-2: #E05828;
+    --cat-3: #28A870;
+    --cat-4: #C09820;
+    --cat-5: #A060D0;
+    --good: #28A870;
+    --good-wash: rgba(40,168,112,0.12);
+    --warn: #C09820;
+    --warn-wash: rgba(192,152,32,0.12);
+    --crit: #E04848;
+    --crit-wash: rgba(224,72,72,0.12);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #06101E;
+  --surface: #0D1B2E;
+  --ink: #C8DDEF;
+  --ink-2: #7098BA;
+  --ink-muted: #7898B8;
+  --grid: #142038;
+  --border: rgba(255,255,255,0.06);
+  --accent: #3A90F0;
+  --accent-bright: #60B0FF;
+  --accent-wash: rgba(58,144,240,0.12);
+  --sb-bg: #040C18;
+  --sb-ink: #90B8D8;
+  --sb-ink-muted: #6888A8;
+  --cat-1: #3A90F0;
+  --cat-2: #E05828;
+  --cat-3: #28A870;
+  --cat-4: #C09820;
+  --cat-5: #A060D0;
+  --good: #28A870;
+  --good-wash: rgba(40,168,112,0.12);
+  --warn: #C09820;
+  --warn-wash: rgba(192,152,32,0.12);
+  --crit: #E04848;
+  --crit-wash: rgba(224,72,72,0.12);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  display: flex;
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── SIDEBAR ── siempre navy oscuro independiente del tema */
+.sidebar {
+  width: 248px;
+  background: linear-gradient(175deg, #07111F 0%, #0A1A2E 60%, #081424 100%);
+  padding: 0;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  border-right: 1px solid rgba(255,255,255,0.05);
+}
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 20px 16px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  margin-bottom: 10px;
+}
+.logo-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 7px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.70rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 1.05rem;
+  color: #FFFFFF;
+  line-height: 1.2;
+}
+.logo-text small {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.58rem;
+  color: var(--sb-ink-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  margin-top: 2px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  margin: 1px 8px;
+  font-size: 0.81rem;
+  font-weight: 500;
+  color: var(--sb-ink);
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: calc(100% - 16px);
+  text-align: left;
+  border-radius: 7px;
+  transition: background 0.12s, color 0.12s;
+  font-family: inherit;
+}
+.nav-item:hover {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+}
+.nav-item.active {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+.nav-item svg { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.75; }
+.nav-item.active svg, .nav-item:hover svg { opacity: 1; }
+.nav-badge {
+  margin-left: auto;
+  background: #E05050;
+  color: #fff;
+  font-size: 0.60rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+.sidebar-footer {
+  margin-top: auto;
+  padding: 14px 20px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  font-size: 0.68rem;
+  color: var(--sb-ink-muted);
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+}
+
+/* ── MAIN ── */
+.main {
+  flex: 1;
+  padding: 32px 32px;
+  max-width: 1120px;
+  overflow-y: auto;
+  min-height: 100vh;
+}
+@media (max-width: 700px) {
+  body { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 8px;
+    gap: 0;
+  }
+  .sidebar-logo { padding: 8px 12px; border: none; margin: 0; width: 100%; }
+  .nav-item { padding: 8px 12px; flex: 0; width: auto; margin: 2px; }
+  .sidebar-footer { display: none; }
+  .main { padding: 16px 20px; }
+}
+
+.page-title {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 1.8rem;
+  font-weight: 400;
+  margin-bottom: 4px;
+  letter-spacing: -0.02em;
+  position: relative;
+  padding-bottom: 14px;
+}
+.page-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 36px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+}
+.page-subtitle {
+  font-size: 0.80rem;
+  color: var(--ink-muted);
+  margin-top: 10px;
+  margin-bottom: 28px;
+}
+
+/* ── STATS STRIP ── números directos en el canvas, sin cajas */
+.stats-row {
+  display: flex;
+  flex-direction: row;
+  border-top: 1px solid var(--grid);
+  border-bottom: 1px solid var(--grid);
+  margin-bottom: 36px;
+  overflow: hidden;
+}
+.stat-card {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--grid);
+  border-radius: 0;
+  padding: 18px 20px 16px;
+  box-shadow: none;
+  position: relative;
+}
+.stat-card:last-child { border-right: none; }
+.stat-card:first-child::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent);
+}
+.stat-label {
+  font-size: 0.57rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--ink-muted);
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stat-val {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 2.8rem;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+.stat-card:first-child .stat-val { color: var(--accent-bright, var(--accent)); }
+.stat-sub {
+  font-size: 0.68rem;
+  color: var(--ink-muted);
+  margin-top: 4px;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: 0;
+  padding: 24px 28px;
+  margin-bottom: 2px;
+  border-left: 3px solid var(--grid);
+  border-top: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.card-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink);
+}
+.card-sub {
+  font-size: 0.72rem;
+  color: var(--ink-muted);
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+
+/* ── SEARCH / INPUTS ── */
+.search-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.search-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 8px 14px;
+  border: 1px solid var(--grid);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  background: var(--surface);
+  color: var(--ink);
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-wash);
+}
+.btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.80rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--grid);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  transition: background 0.1s, border-color 0.1s;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--grid); }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover { opacity: 0.88; background: var(--accent); }
+.btn-danger { background: var(--crit); color: #fff; border-color: var(--crit); }
+.btn:disabled { opacity: 0.38; cursor: default; }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nav-item:focus-visible { outline: 2px solid rgba(255,255,255,0.60); outline-offset: -2px; }
+
+/* ── TABLES ── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.79rem;
+}
+.data-table th {
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.63rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-muted);
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--grid);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.data-table th:hover { color: var(--accent); }
+.data-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--grid);
+  color: var(--ink-2);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.data-table tbody tr:nth-child(even) td { background: rgba(0,0,0,0.018); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .data-table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.025); }
+}
+:root[data-theme="dark"] .data-table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.025); }
+.data-table tr:hover td { background: var(--accent-wash) !important; }
+.data-table td:last-child { font-variant-numeric: tabular-nums; }
+
+/* ── BAR CHART ── */
+.hbar { margin-bottom: 12px; }
+.hbar-label {
+  font-size: 0.75rem;
+  color: var(--ink-2);
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+.hbar-track {
+  height: 10px;
+  background: var(--grid);
+  border-radius: 0;
+  overflow: hidden;
+}
+.hbar-fill {
+  height: 100%;
+  border-radius: 0;
+  transition: width 0.45s ease;
+  position: relative;
+}
+.hbar-fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255,255,255,0.3);
+}
+
+/* ── TAGS ── */
+.tag {
+  display: inline-block;
+  font-size: 0.63rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+}
+.tag-exp { background: var(--accent-wash); color: var(--accent); }
+.tag-alias { background: var(--good-wash); color: var(--good); }
+.tag-match { background: var(--warn-wash); color: var(--warn); }
+.tag-none { background: var(--crit-wash); color: var(--crit); }
+
+/* ── LOADING ── */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+}
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--grid);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-right: 10px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── DROP & ALIAS ── */
+.soltar {
+  border: 2px dashed var(--grid);
+  border-radius: var(--radius);
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  line-height: 1.6;
+}
+.soltar.encima { border-color: var(--accent); background: var(--accent-wash); color: var(--accent); }
+.alias-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+.alias-row input {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--grid);
+  border-radius: 5px;
+  font-size: 0.80rem;
+  font-family: 'IBM Plex Mono', 'Cascadia Code', monospace;
+  background: var(--surface);
+  color: var(--ink);
+  transition: border-color 0.15s;
+}
+.alias-row input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-wash); }
+.alias-del {
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: color 0.1s;
+}
+.alias-del:hover { color: var(--crit); }
+.mono {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.78em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── UTILITIES ── */
+.section { display: none; }
+.section.active { display: block; }
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 0.82rem;
+  cursor: pointer;
+  color: var(--ink-2);
+}
+.check-row input[type="checkbox"] { accent-color: var(--accent); }
+
+.table-wrap {
+  overflow-x: auto;
+  max-height: 520px;
+  overflow-y: auto;
+  border-radius: 0;
+  border: 1px solid var(--grid);
+}
+.cfg-overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+  background: rgba(6,16,30,0.72); padding: 16px; }
+.cfg-overlay[hidden] { display: none; }
+.cfg-panel { width: 100%; max-width: 520px; max-height: 100%; overflow-y: auto; }
+.cfg-panel label { display: block; margin: 14px 0 4px; font-size: 0.72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-2); }
+.cfg-panel .search-input { width: 100%; box-sizing: border-box; }
+.cfg-panel small { display: block; margin-top: 4px; color: var(--ink-muted); font-size: 0.74rem; }
+.cfg-error { margin-top: 12px; color: var(--crit); font-size: 0.82rem; white-space: pre-wrap; }
+.cfg-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+.sidebar-footer button { all: unset; cursor: pointer; text-decoration: underline; }
+.alta-panel { margin-top: 10px; }
+.alta-panel[hidden] { display: none; }
+.cartera-acciones { white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<div class="cfg-overlay" id="cfgOverlay" hidden>
+  <form class="card cfg-panel" id="cfgForm">
+    <div class="card-title" id="cfgTitulo">Configuración</div>
+    <label for="cfgEstudio">Nombre del estudio o del profesional</label>
+    <input class="search-input" id="cfgEstudio" maxlength="80" required>
+    <label for="cfgUbicacion">Ciudad o jurisdicción</label>
+    <input class="search-input" id="cfgUbicacion" maxlength="80">
+    <label for="cfgApellidos">Tus apellidos</label>
+    <input class="search-input" id="cfgApellidos" required placeholder="perez, gomez">
+    <small>Separados por coma. Sirven para no confundir tu firma con el nombre de una causa.</small>
+    <label for="cfgBase">Carpeta donde se organizan los expedientes</label>
+    <input class="search-input" id="cfgBase" required placeholder="C:\Users\tu-usuario\Organizador">
+    <small>Ruta completa. Si no existe, se crea. Nada sale de tu computadora.</small>
+    <label>Lectura de PDFs escaneados (OCR)</label>
+    <div class="card-sub" id="ocrEstado">Comprobando...</div>
+    <div class="cfg-actions" style="margin-top:8px"><button type="button" class="btn" id="ocrInstalar" hidden>Instalar OCR en español</button></div>
+    <div class="cfg-error" id="cfgError" hidden></div>
+    <div class="cfg-actions">
+      <button type="button" class="btn" id="cfgCancelar" hidden>Cancelar</button>
+      <button type="submit" class="btn btn-primary" id="cfgGuardar">Guardar y empezar</button>
+    </div>
+  </form>
+</div>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <span class="logo-mark" id="logoMark">O</span>
+    <span class="logo-text">Organizador<small>Expedientes SIGED</small></span>
+  </div>
+  <button class="nav-item active" data-page="overview">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Resumen
+  </button>
+  <button class="nav-item" data-page="expedientes">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+    Expedientes
+  </button>
+  <button class="nav-item" data-page="cartera">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/></svg>
+    Cartera
+  </button>
+  <button class="nav-item" data-page="tandas">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>
+    Tandas
+    <span class="nav-badge" id="inboxBadge" hidden>0</span>
+  </button>
+  <button class="nav-item" data-page="aliases">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+    Aliases
+  </button>
+  <button class="nav-item" data-page="historial">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>
+    Historial
+  </button>
+  <div class="sidebar-footer" id="sbFooter"></div>
+</aside>
+
+<main class="main">
+  <!-- OVERVIEW -->
+  <div class="section active" id="page-overview">
+    <h1 class="page-title">Resumen general</h1>
+    <p class="page-subtitle">Estado actual del archivo digital</p>
+    <div class="stats-row" id="statsRow">
+      <div class="stat-card"><div class="stat-label">Causas</div><div class="stat-val" id="s-causas">—</div></div>
+      <div class="stat-card"><div class="stat-label">Archivos</div><div class="stat-val" id="s-archivos">—</div></div>
+      <div class="stat-card"><div class="stat-label">Inbox pendientes</div><div class="stat-val" id="s-inbox">—</div></div>
+      <div class="stat-card"><div class="stat-label">Aliases</div><div class="stat-val" id="s-aliases">—</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Distribución por tipo de archivo</div>
+      <div class="card-sub">Top 10 extensiones en el archivo</div>
+      <div id="tiposChart"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Causas más grandes</div>
+      <div class="card-sub">Por cantidad de archivos</div>
+      <div id="topCausas"></div>
+    </div>
+  </div>
+
+  <!-- EXPEDIENTES -->
+  <div class="section" id="page-expedientes">
+    <h1 class="page-title">Expedientes</h1>
+    <p class="page-subtitle">Todas las causas en el archivo</p>
+    <div class="search-bar">
+      <input class="search-input" id="expSearch" placeholder="Buscar causa..." autocomplete="off">
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" id="expTable">
+        <thead><tr>
+          <th>Causa</th>
+          <th>Archivos</th>
+          <th>Subcarpetas</th>
+          <th>Última modif.</th>
+        </tr></thead>
+        <tbody id="expBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CARTERA -->
+  <div class="section" id="page-cartera">
+    <h1 class="page-title">Cartera</h1>
+    <p class="page-subtitle">Tus causas cruzadas con las carpetas de expedientes</p>
+    <div class="stats-row" id="carteraResumen"></div>
+    <div class="card" id="altaCard">
+      <div class="card-title">Agregar causas</div>
+      <div class="card-sub">Cargá tus causas a mano, pegando una lista o buscándolas en una carpeta que ya tengas.</div>
+      <div class="search-bar" style="margin-top:8px">
+        <button class="btn btn-primary alta-tab" data-tab="uno">Una causa</button>
+        <button class="btn alta-tab" data-tab="lista">Pegar una lista</button>
+        <button class="btn alta-tab" data-tab="escanear">Buscar en una carpeta</button>
+      </div>
+      <div class="alta-panel" id="alta-uno">
+        <div class="search-bar">
+          <input class="search-input" id="altaExpte" placeholder="Expediente, ej. 1234/2023" style="max-width:220px">
+          <input class="search-input" id="altaCaratula" placeholder="Carátula (opcional)">
+          <input class="search-input" id="altaDependencia" placeholder="Juzgado (opcional)" style="max-width:220px">
+          <button class="btn btn-primary" id="altaUnoBtn">Agregar</button>
+        </div>
+      </div>
+      <div class="alta-panel" id="alta-lista" hidden>
+        <textarea class="search-input" id="altaTexto" rows="6" style="width:100%;box-sizing:border-box"
+          placeholder="Una causa por línea. Número y, si querés, la carátula:&#10;1234/2023&#10;5678/2022 PEREZ c/ GOMEZ s/ Daños"></textarea>
+        <div class="search-bar" style="margin-top:8px"><button class="btn btn-primary" id="altaListaBtn">Cargar lista</button></div>
+      </div>
+      <div class="alta-panel" id="alta-escanear" hidden>
+        <div class="search-bar">
+          <input class="search-input" id="escCarpeta" placeholder="Carpeta donde buscar, ruta completa">
+          <button class="btn btn-primary" id="escBtn">Buscar</button>
+        </div>
+        <div class="search-bar" style="gap:16px;flex-wrap:wrap">
+          <label><input type="checkbox" class="esc-fuente" value="carpeta" checked> en nombres de carpetas</label>
+          <label><input type="checkbox" class="esc-fuente" value="archivo" checked> en nombres de archivos</label>
+          <label><input type="checkbox" class="esc-fuente" value="texto"> dentro del texto (más lento)</label>
+        </div>
+        <details style="margin-top:6px"><summary>Opciones</summary>
+          <div class="search-bar">
+            <input class="search-input" id="escPatron" placeholder="Patrón propio con dos grupos, ej. EXP(\d+)\.(\d{4})">
+            <input class="search-input" id="escProf" type="number" min="1" max="12" value="6" style="max-width:110px" title="Niveles de subcarpetas">
+          </div>
+          <div class="card-sub">El patrón es una expresión regular con dos grupos: número y año. Se prueba antes que los formatos habituales.</div>
+        </details>
+        <div id="escResultado" style="margin-top:10px"></div>
+      </div>
+      <div class="card-sub" id="altaMsg" style="margin-top:8px" hidden></div>
+    </div>
+    <div class="search-bar">
+      <input class="search-input" id="carteraSearch" placeholder="Buscar número, carátula o carpeta..." autocomplete="off">
+      <select class="search-input" id="carteraEstado" style="max-width:200px">
+        <option value="">Todos los estados</option>
+        <option value="ok">Con carpeta</option>
+        <option value="crear">Prevista (a demanda)</option>
+        <option value="renombrar">A renombrar</option>
+        <option value="revisar">A revisar</option>
+      </select>
+    </div>
+    <div class="table-wrap"><table class="data-table"><thead><tr>
+      <th>Expediente</th><th>Carátula</th><th>Carpeta</th><th>Estado</th><th>Archivos</th><th>Fuentes</th><th></th>
+    </tr></thead><tbody id="carteraBody"></tbody></table></div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">Carpetas fuera de la cartera</div>
+      <div class="card-sub">En 01_Expedientes pero no en tu cartera. "Es mía" la deja como propia; "Ajena" arma una propuesta en Tandas para sacarla (fallos y doctrina a su tema, el resto a 06_Expedientes_ajenos).</div>
+      <div class="search-bar" style="margin-top:8px">
+        <select class="search-input" id="fueraClase" style="max-width:220px">
+          <option value="">Todas</option><option value="propia_probable">Probablemente mías</option>
+          <option value="dudosa">Dudosas</option><option value="ajena">Ajenas</option>
+        </select>
+      </div>
+      <div class="table-wrap"><table class="data-table"><thead><tr>
+        <th>Carpeta</th><th>Archivos</th><th>Señales</th><th>Análisis</th><th></th>
+      </tr></thead><tbody id="fueraBody"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- ESCRITORIO SIGED -->
+  <div class="section" id="page-escritorio">
+    <h1 class="page-title">Escritorio SIGED</h1>
+    <p class="page-subtitle" id="escritorioArchivo">Última lectura del escritorio (skill justi-control, solo lectura)</p>
+    <div class="search-bar">
+      <input class="search-input" id="escritorioSearch" placeholder="Buscar..." autocomplete="off">
+      <label class="check-row"><input type="checkbox" id="escritorioFaltan"> Solo los que no están en la cartera</label>
+    </div>
+    <div class="table-wrap"><table class="data-table"><thead><tr>
+      <th>Número</th><th>Designación</th><th>Dependencia</th><th>En cartera</th>
+    </tr></thead><tbody id="escritorioBody"></tbody></table></div>
+  </div>
+
+  <!-- TANDAS -->
+  <div class="section" id="page-tandas">
+    <h1 class="page-title">Tandas</h1>
+    <p class="page-subtitle">Simular → revisar agrupado por destino → aplicar lo aprobado. Todo queda en el historial y se puede deshacer.</p>
+    <div class="card">
+      <div class="card-title">Nueva simulación</div>
+      <div class="search-bar" style="margin-top:8px">
+        <input class="search-input" id="simOrigen" value="" placeholder="Carpeta a organizar...">
+        <button class="btn btn-primary" id="btnSimular">Simular</button>
+      </div>
+      <div id="simEstado" class="card-sub"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Soltar archivos</div>
+      <div class="card-sub">Arrastrá un grupo de archivos: se copian a _INBOX\_soltados y se simulan. Los originales quedan donde estaban.</div>
+      <div class="soltar" id="zonaSoltar" style="margin-top:10px">Soltá los archivos acá o hacé clic para elegirlos
+        <input type="file" id="inputSoltar" multiple hidden></div>
+      <div id="soltarEstado" class="card-sub" style="margin-top:6px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Propuestas guardadas</div>
+      <div class="card-sub">Simulaciones de esta app y de consola (_SISTEMA\REORG_*.csv)</div>
+      <div class="table-wrap" style="max-height:260px"><table class="data-table"><thead><tr>
+        <th>Propuesta</th><th>Fecha</th><th>Filas</th><th>A mover</th><th>Pendientes</th><th></th>
+      </tr></thead><tbody id="propuestasBody"></tbody></table></div>
+    </div>
+    <div id="revision"></div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="section" id="page-historial">
+    <h1 class="page-title">Historial</h1>
+    <p class="page-subtitle" id="historialSub">Todos los movimientos (consola y dashboard), agrupados en tandas</p>
+    <div class="search-bar">
+      <input class="search-input" id="historialSearch" placeholder="Filtrar por archivo o carpeta..." autocomplete="off">
+      <button class="btn" id="btnHistorialBuscar">Buscar</button>
+    </div>
+    <div id="historialEstado"></div>
+    <div class="table-wrap"><table class="data-table"><thead><tr>
+      <th>Fecha</th><th>Tanda</th><th>Archivos</th><th></th><th>Motivos</th><th>Destinos</th><th>Origen</th>
+    </tr></thead><tbody id="historialBody"></tbody></table></div>
+    <div id="historialDetalle"></div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">Carpetas creadas y renombradas</div>
+      <div class="table-wrap" style="max-height:260px"><table class="data-table"><thead><tr>
+        <th>Fecha</th><th>Acción</th><th>Antes</th><th>Después</th>
+      </tr></thead><tbody id="carpetasBody"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- ALIASES -->
+  <div class="section" id="page-aliases">
+    <h1 class="page-title">Tabla de aliases</h1>
+    <p class="page-subtitle">Patrones regex que matchean nombres informales de archivo a causas</p>
+    <div class="card">
+      <div class="card-title">Manuales</div>
+      <div class="card-sub">Los editás vos; se aplican primero</div>
+      <div id="aliasEditor" style="margin-top:10px"></div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn" id="btnAddAlias">+ Agregar</button>
+        <button class="btn btn-primary" id="btnSaveAliases">Guardar</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Desde la cartera (automáticos)</div>
+      <div class="card-sub">Un alias por apellido de cliente que no se repite entre causas. Se regeneran con <code>cartera_cli.py aliases</code>; no se editan acá.</div>
+      <div class="table-wrap" style="margin-top:10px"><table class="data-table"><thead><tr><th>Patrón</th><th>Causa</th><th>Expediente</th></tr></thead>
+        <tbody id="aliasCartera"></tbody></table></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const API = '';
+
+document.querySelectorAll('.nav-item').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById('page-' + btn.dataset.page).classList.add('active');
+    loadPage(btn.dataset.page);
+  });
+});
+
+function loadPage(page) {
+  const fn = { overview: loadOverview, expedientes: loadExpedientes, aliases: loadAliases, cartera: loadCartera,
+              escritorio: loadEscritorio, tandas: loadTandas, historial: loadHistorial }[page];
+  if (fn) fn().catch(err => mostrarError(document.getElementById('page-' + page), err));
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  let body = null;
+  try { body = await r.json(); } catch { /* respuesta no JSON */ }
+  if (!r.ok) {
+    const msg = body?.error || (body?.errores || []).join('\n') || `HTTP ${r.status}`;
+    throw new Error(msg);
+  }
+  return body;
+}
+function mostrarError(el, err) {
+  const div = document.createElement('div');
+  div.className = 'card';
+  div.style.color = 'var(--crit)';
+  div.style.whiteSpace = 'pre-wrap';
+  div.textContent = 'Error: ' + err.message;
+  el.prepend(div);
+}
+
+function fmt(n) { return n?.toLocaleString('es-AR') ?? '—'; }
+function fmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('es-AR', { day:'2-digit', month:'short', year:'2-digit' });
+}
+function loading(el) { el.innerHTML = '<div class="loading"><div class="spinner"></div>Cargando...</div>'; }
+
+const MOTIVOS = {
+  expediente:          ['tag-exp',   'Expte'],
+  jurisprudencia:      ['tag-exp',   'Juris'],
+  cartera:             ['tag-alias', 'Cartera'],
+  doctrina:            ['tag-exp',   'Doctrina'],
+  expediente_nuevo:    ['tag-match', 'Carpeta nueva'],
+  alias:               ['tag-alias', 'Alias'],
+  match_carpeta:       ['tag-match', 'Match nombre'],
+  escrito_propio:      ['tag-match', 'Propio s/nro'],
+  rama:                ['tag-match', 'Rama'],
+  sin_clasificar:      ['tag-none',  'Sin clasif.'],
+  sin_texto:           ['tag-none',  'Sin texto'],
+  formato_desconocido: ['tag-none',  'Formato'],
+};
+function tagMotivo(m) {
+  const [cls, label] = MOTIVOS[m] || ['tag-none', m];
+  return `<span class="tag ${cls}">${esc(label)}</span>`;
+}
+function hbar(label, count, max, color) {
+  return `<div class="hbar">
+    <div class="hbar-label"><span>${label}</span><span>${fmt(count)}</span></div>
+    <div class="hbar-track"><div class="hbar-fill" style="width:${count/max*100}%;background:${color}"></div></div>
+  </div>`;
+}
+
+// Resumen
+async function loadOverview() {
+  const [stats, tipos, exps] = await Promise.all([api('/api/stats'), api('/api/tipos'), api('/api/expedientes')]);
+  document.getElementById('s-causas').textContent = fmt(stats.total_causas);
+  document.getElementById('s-archivos').textContent = fmt(stats.total_archivos);
+  document.getElementById('s-inbox').textContent = fmt(stats.inbox_pendientes);
+  document.getElementById('s-aliases').textContent = fmt(stats.aliases_configurados);
+
+  const badge = document.getElementById('inboxBadge');
+  badge.textContent = stats.inbox_pendientes;
+  badge.hidden = !(stats.inbox_pendientes > 0);
+
+  const entries = Object.entries(tipos).slice(0, 10);
+  const maxT = Math.max(1, ...entries.map(e => e[1]));
+  const colors = ['var(--cat-1)','var(--cat-2)','var(--cat-3)','var(--cat-4)','var(--cat-5)'];
+  document.getElementById('tiposChart').innerHTML = entries
+    .map(([ext, n], i) => hbar(esc(ext || '(sin ext)'), n, maxT, colors[i] || 'var(--ink-muted)')).join('');
+
+  const top = [...exps].sort((a,b) => b.total - a.total).slice(0, 10);
+  const maxC = top[0]?.total || 1;
+  document.getElementById('topCausas').innerHTML = top
+    .map(c => hbar(esc(c.nombre), c.total, maxC, 'var(--accent)')).join('');
+}
+
+// Expedientes
+let allExps = [];
+async function loadExpedientes() {
+  document.getElementById('expBody').innerHTML = '<tr><td colspan="4"><div class="loading"><div class="spinner"></div>Cargando...</div></td></tr>';
+  allExps = await api('/api/expedientes');
+  renderExps(allExps);
+}
+function renderExps(list) {
+  document.getElementById('expBody').innerHTML = list.map(c => `
+    <tr>
+      <td title="${esc(c.nombre)}">${esc(c.nombre)}</td>
+      <td>${c.total}</td>
+      <td>${esc(Object.entries(c.subcarpetas).map(([k,v]) => `${k}(${v})`).join(', '))}</td>
+      <td>${fmtDate(c.ultima_mod)}</td>
+    </tr>`).join('');
+}
+document.getElementById('expSearch').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase();
+  renderExps(allExps.filter(c => c.nombre.toLowerCase().includes(q)));
+});
+
+// Cartera
+let cartera = [];
+const ESTADOS = { ok: ['tag-alias', 'Con carpeta'], crear: ['tag-exp', 'Prevista'], renombrar: ['tag-match', 'Renombrar'], revisar: ['tag-none', 'Revisar'] };
+function tagEstado(a) { const [c, l] = ESTADOS[a] || ['tag-none', a || '—']; return `<span class="tag ${c}">${esc(l)}</span>`; }
+async function loadCartera() {
+  const data = await api('/api/cartera');
+  cartera = data.causas;
+  document.getElementById('carteraResumen').innerHTML =
+    `<div class="stat-card"><div class="stat-label">Causas</div><div class="stat-val">${fmt(cartera.length)}</div></div>`
+    + Object.entries(ESTADOS).map(([k, [, l]]) => `<div class="stat-card"><div class="stat-label">${esc(l)}</div><div class="stat-val">${fmt(data.resumen[k] || 0)}</div></div>`).join('');
+  renderCartera();
+  loadFuera().catch(err => mostrarError(document.getElementById('page-cartera'), err));
+}
+function renderCartera() {
+  const q = document.getElementById('carteraSearch').value.toLowerCase();
+  const estado = document.getElementById('carteraEstado').value;
+  const lista = cartera.filter(c => (!estado || c.accion === estado)
+    && (!q || [c.expte, c.caratula, c.carpeta, c.prevista].some(v => (v || '').toLowerCase().includes(q))));
+  document.getElementById('carteraBody').innerHTML = lista.map(c => `<tr>
+    <td class="mono">${esc(c.expte)}</td>
+    <td title="${esc(c.caratula)}">${esc((c.caratula || '—').slice(0, 70))}</td>
+    <td title="${esc(c.nota)}">${esc(c.carpeta || c.prevista || '—')}${c.carpeta || !c.prevista ? '' : ' <span style="color:var(--ink-muted)">(a demanda)</span>'}</td>
+    <td>${tagEstado(c.accion)}${c.nota ? ' <span style="color:var(--ink-muted)">' + esc(c.nota) + '</span>' : ''}</td>
+    <td>${c.existe ? fmt(c.archivos) : '—'}</td>
+    <td>${esc((c.fuentes || []).join(', '))}</td>
+    <td class="cartera-acciones"><button class="btn" data-accion="editar" data-expte="${esc(c.expte)}">Editar</button> <button class="btn" data-accion="quitar" data-expte="${esc(c.expte)}">Quitar</button></td></tr>`).join('');
+}
+document.getElementById('carteraSearch').addEventListener('input', renderCartera);
+
+const jsonPost = (metodo, cuerpo) => ({ method: metodo, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo) });
+function altaMensaje(texto, error) {
+  const el = document.getElementById('altaMsg');
+  el.textContent = texto;
+  el.style.color = error ? 'var(--crit)' : 'var(--good)';
+  el.hidden = !texto;
+}
+document.querySelectorAll('.alta-tab').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.alta-tab').forEach(x => x.classList.toggle('btn-primary', x === b));
+  document.querySelectorAll('.alta-panel').forEach(p => { p.hidden = p.id !== 'alta-' + b.dataset.tab; });
+  altaMensaje('');
+}));
+document.getElementById('altaUnoBtn').addEventListener('click', async () => {
+  try {
+    const r = await api('/api/cartera', jsonPost('POST', {
+      expte: document.getElementById('altaExpte').value, caratula: document.getElementById('altaCaratula').value,
+      dependencia: document.getElementById('altaDependencia').value }));
+    altaMensaje(`Agregada: ${r.agregadas[0]}`);
+    ['altaExpte', 'altaCaratula', 'altaDependencia'].forEach(id => { document.getElementById(id).value = ''; });
+    loadCartera();
+  } catch (e) { altaMensaje(e.message, true); }
+});
+document.getElementById('altaListaBtn').addEventListener('click', async () => {
+  try {
+    const r = await api('/api/cartera/lista', jsonPost('POST', { texto: document.getElementById('altaTexto').value }));
+    const partes = [`${r.agregadas.length} agregadas`];
+    if (r.repetidas.length) partes.push(`${r.repetidas.length} ya estaban`);
+    if (r.invalidas.length) partes.push(`${r.invalidas.length} con formato inválido: ${r.invalidas.slice(0, 5).join(' | ')}`);
+    altaMensaje(partes.join(' · '), r.invalidas.length > 0 && !r.agregadas.length);
+    if (r.agregadas.length) { document.getElementById('altaTexto').value = ''; loadCartera(); }
+  } catch (e) { altaMensaje(e.message, true); }
+});
+let escHallazgos = [];
+function opcionesEscaneo() {
+  return { carpeta: document.getElementById('escCarpeta').value,
+           fuentes: [...document.querySelectorAll('.esc-fuente:checked')].map(c => c.value),
+           patron: document.getElementById('escPatron').value, profundidad: Number(document.getElementById('escProf').value) || 6 };
+}
+document.getElementById('escBtn').addEventListener('click', async () => {
+  const op = opcionesEscaneo();
+  try { localStorage.setItem('escaneo', JSON.stringify(op)); } catch { /* sin almacenamiento */ }
+  const btn = document.getElementById('escBtn');
+  btn.disabled = true; btn.textContent = 'Buscando...';
+  try {
+    const r = await api('/api/cartera/escanear', jsonPost('POST', op));
+    escHallazgos = r.causas;
+    const nuevas = r.causas.filter(c => !c.en_cartera).length;
+    document.getElementById('escResultado').innerHTML = r.causas.length
+      ? `<div class="card-sub">${fmt(r.revisados)} archivos revisados${r.truncado ? ' (se cortó en el límite)' : ''} · ${r.causas.length} expedientes · ${nuevas} nuevos</div>
+         <div class="table-wrap"><table class="data-table"><thead><tr><th></th><th>Expediente</th><th>Archivos</th><th>Hallado en</th><th>Carátula</th><th>Ejemplo</th></tr></thead><tbody>`
+        + r.causas.map((c, i) => `<tr><td><input type="checkbox" class="esc-sel" data-i="${i}" ${c.en_cartera ? 'disabled' : 'checked'}></td>
+            <td class="mono">${esc(c.expte)}${c.en_cartera ? ' <span style="color:var(--ink-muted)">(ya cargada)</span>' : ''}</td>
+            <td>${fmt(c.archivos)}</td><td>${esc(c.origen)}</td>
+            <td><input class="search-input esc-car" data-i="${i}" value="${esc(c.caratula || '')}" placeholder="opcional" ${c.en_cartera ? 'disabled' : ''}></td>
+            <td title="${esc(c.ejemplos.join(' | '))}">${esc(c.ejemplos[0] || '')}</td></tr>`).join('')
+        + `</tbody></table></div><div class="search-bar" style="margin-top:8px"><button class="btn btn-primary" id="escAgregar">Agregar las seleccionadas</button></div>`
+      : '<div class="card-sub">No se encontró ningún número de expediente. Probá con otras fuentes o con un patrón propio.</div>';
+    const ag = document.getElementById('escAgregar');
+    if (ag) ag.addEventListener('click', async () => {
+      const causas = [...document.querySelectorAll('.esc-sel:checked')].map(c => ({
+        expte: escHallazgos[c.dataset.i].expte,
+        caratula: document.querySelector(`.esc-car[data-i="${c.dataset.i}"]`).value }));
+      try {
+        const a = await api('/api/cartera/escanear/agregar', jsonPost('POST', { causas }));
+        altaMensaje(`${a.agregadas.length} causas agregadas`);
+        document.getElementById('escResultado').innerHTML = '';
+        loadCartera();
+      } catch (e) { altaMensaje(e.message, true); }
+    });
+  } catch (e) { altaMensaje(e.message, true); } finally { btn.disabled = false; btn.textContent = 'Buscar'; }
+});
+try {
+  const g = JSON.parse(localStorage.getItem('escaneo') || 'null');
+  if (g) {
+    document.getElementById('escCarpeta').value = g.carpeta || '';
+    document.getElementById('escPatron').value = g.patron || '';
+    document.getElementById('escProf').value = g.profundidad || 6;
+    document.querySelectorAll('.esc-fuente').forEach(c => { c.checked = (g.fuentes || []).includes(c.value); });
+  }
+} catch { /* sin almacenamiento */ }
+document.getElementById('carteraBody').addEventListener('click', async ev => {
+  const b = ev.target.closest('button[data-accion]');
+  if (!b) return;
+  const c = cartera.find(x => x.expte === b.dataset.expte);
+  try {
+    if (b.dataset.accion === 'editar') {
+      const nueva = prompt(`Carátula de ${c.expte}`, c.caratula || '');
+      if (nueva === null) return;
+      await api('/api/cartera', jsonPost('PATCH', { expte: c.expte, caratula: nueva }));
+    } else if (confirm(`¿Sacar ${c.expte} de la cartera? No se borra ninguna carpeta ni archivo.`)) {
+      await api('/api/cartera', jsonPost('DELETE', { expte: c.expte }));
+    } else return;
+    loadCartera();
+  } catch (e) { altaMensaje(e.message, true); }
+});
+
+let fuera = [];
+const CLASES = { propia_probable: ['tag-alias', 'Probable mía'], dudosa: ['tag-match', 'Dudosa'], ajena: ['tag-none', 'Ajena'] };
+async function loadFuera() {
+  fuera = await api('/api/fuera');
+  renderFuera();
+}
+function renderFuera() {
+  const clase = document.getElementById('fueraClase').value;
+  document.getElementById('fueraBody').innerHTML = fuera.filter(f => !clase || f.clase === clase).map(f => {
+    const [c, l] = CLASES[f.clase] || ['tag-none', f.clase];
+    const sen = [f.matricula !== '0' ? `matrícula ${f.matricula}` : '', f.apellido !== '0' ? `apellido ${f.apellido}` : ''].filter(Boolean).join(' · ') || '—';
+    return `<tr><td>${esc(f.carpeta)}</td><td>${fmt(f.archivos)}</td><td>${esc(sen)}</td>
+      <td><span class="tag ${c}">${esc(l)}</span></td>
+      <td style="white-space:nowrap"><button class="btn fuera-mia" data-c="${esc(f.carpeta)}">Es mía</button>
+        <button class="btn fuera-ajena" data-c="${esc(f.carpeta)}">Ajena</button></td></tr>`;
+  }).join('') || '<tr><td colspan="5" style="color:var(--ink-muted)">Todas las carpetas están en tu cartera</td></tr>';
+  document.querySelectorAll('.fuera-mia').forEach(b => b.addEventListener('click', async () => {
+    await api('/api/fuera/mia', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ carpeta: b.dataset.c }) });
+    fuera = fuera.filter(f => f.carpeta !== b.dataset.c); renderFuera();
+  }));
+  document.querySelectorAll('.fuera-ajena').forEach(b => b.addEventListener('click', async () => {
+    b.disabled = true; b.textContent = 'Armando...';
+    const r = await api('/api/fuera/ajena', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ carpeta: b.dataset.c }) });
+    document.querySelector('.nav-item[data-page="tandas"]').click();
+    await abrirPropuesta(r.csv);
+  }));
+}
+document.getElementById('fueraClase').addEventListener('change', renderFuera);
+document.getElementById('carteraEstado').addEventListener('change', renderCartera);
+
+// Escritorio SIGED
+let escritorio = [];
+async function loadEscritorio() {
+  const data = await api('/api/escritorio');
+  escritorio = data.filas;
+  const faltan = escritorio.filter(f => !f.en_cartera).length;
+  document.getElementById('escritorioArchivo').textContent = data.archivo
+    ? `${escritorio.length} expedientes, ${faltan} fuera de la cartera. Lectura: ${data.archivo}`
+    : 'No hay lecturas del escritorio. Correr la skill justi-control (comando escritorio).';
+  renderEscritorio();
+}
+function renderEscritorio() {
+  const q = document.getElementById('escritorioSearch').value.toLowerCase();
+  const soloFaltan = document.getElementById('escritorioFaltan').checked;
+  document.getElementById('escritorioBody').innerHTML = escritorio
+    .filter(f => (!soloFaltan || !f.en_cartera) && (!q || [f.numero, f.designacion, f.origen].some(v => (v || '').toLowerCase().includes(q))))
+    .map(f => `<tr${f.en_cartera ? '' : ' style="background:var(--warn-wash)"'}>
+      <td class="mono">${esc(f.numero)}</td><td title="${esc(f.designacion)}">${esc((f.designacion || '').slice(0, 80))}</td>
+      <td>${esc(f.origen || '—')}</td><td>${f.en_cartera ? '✓' : '<span class="tag tag-match">Falta</span>'}</td></tr>`).join('');
+}
+document.getElementById('escritorioSearch').addEventListener('input', renderEscritorio);
+document.getElementById('escritorioFaltan').addEventListener('change', renderEscritorio);
+
+// Tandas
+let prop = null;          // propuesta abierta: {nombre, base, filas}
+let carpetas = [];
+async function loadTandas() {
+  const lista = await api('/api/propuestas');
+  document.getElementById('propuestasBody').innerHTML = lista.map(p => `<tr>
+    <td>${esc(p.nombre)}</td><td>${esc(p.fecha.replace('T', ' '))}</td><td>${fmt(p.filas)}</td>
+    <td>${fmt(p.a_mover)}</td><td>${fmt(p.pendientes)}</td>
+    <td><button class="btn abrir-prop" data-n="${esc(p.nombre)}"${p.pendientes ? '' : ' disabled'}>Revisar</button></td></tr>`).join('')
+    || '<tr><td colspan="6" style="color:var(--ink-muted)">Sin propuestas</td></tr>';
+  document.querySelectorAll('.abrir-prop').forEach(b => b.addEventListener('click', () =>
+    abrirPropuesta(b.dataset.n).catch(err => mostrarError(document.getElementById('revision'), err))));
+  if (!carpetas.length) carpetas = await api('/api/carpetas');
+}
+
+document.getElementById('btnSimular').addEventListener('click', async () => {
+  const el = document.getElementById('simEstado');
+  try {
+    let s = await api('/api/simular', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ origen: document.getElementById('simOrigen').value }) });
+    while (s.estado === 'corriendo') {
+      el.textContent = s.total == null ? 'Buscando archivos...' : `Clasificando ${fmt(s.hechos)} de ${fmt(s.total)}...`;
+      await new Promise(r => setTimeout(r, 1000));
+      s = await api('/api/simular/' + s.id);
+    }
+    if (s.estado === 'error') throw new Error(s.error);
+    el.textContent = `Listo: ${fmt(s.total)} archivos → ${s.csv}`;
+    await loadTandas();
+    await abrirPropuesta(s.csv);
+  } catch (err) { el.textContent = ''; mostrarError(el.parentElement, err); }
+});
+
+// Criterios de revision aprendidos en las tandas de septiembre
+const CRITERIOS = [
+  f => ['match_carpeta', 'expediente_nuevo', 'sin_clasificar', 'sin_texto', 'formato_desconocido'].includes(f.motivo),
+  f => f.confianza === 'baja',
+  f => /_var_www_/.test(f.nombre),
+  f => /[\\/][^\\/]+-(main|master)[\\/]/i.test(f.archivo),
+];
+
+async function abrirPropuesta(nombre) {
+  const data = await api('/api/propuestas/' + encodeURIComponent(nombre));
+  prop = { ...data, filas: data.filas.map(f => ({ ...f, marcado: f.accion.toLowerCase() === 'mover' && f.existe })) };
+  prop.filas.forEach(f => { if (CRITERIOS.some(c => c(f))) f.marcado = false; });
+  renderRevision();
+  document.getElementById('revision').scrollIntoView({ behavior: 'smooth' });
+}
+
+function aplicarCriterios() {
+  prop.filas.forEach(f => { if (CRITERIOS.some(c => c(f))) f.marcado = false; });
+  renderRevision();
+}
+
+function renderRevision() {
+  const el = document.getElementById('revision');
+  const conf = document.getElementById('revConf')?.value || '';
+  const pendientes = prop.filas.filter(f => f.existe && (!conf || f.confianza === conf));
+  const grupos = {};
+  pendientes.forEach(f => (grupos[f.destino_rel] ||= []).push(f));
+  const orden = Object.entries(grupos).sort((a, b) => b[1].length - a[1].length);
+  const marcados = prop.filas.filter(f => f.existe && f.marcado).length;
+  const motivos = [...new Set(pendientes.map(f => f.motivo))];
+
+  el.innerHTML = `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+      <div><div class="card-title">${esc(prop.nombre)}</div>
+        <div class="card-sub">${fmt(pendientes.length)} pendientes en ${fmt(orden.length)} destinos · <b>${fmt(marcados)} marcados para mover</b> · criterios aplicados</div>
+        ${prop.vieja ? `<div class="card-sub" style="color:var(--warn)">Propuesta del ${esc(prop.fecha.replace('T', ' '))}: se simuló con reglas anteriores. Conviene volver a simular la carpeta antes de mover.</div>` : ''}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select class="search-input" id="revConf" style="max-width:170px">
+          <option value="">Toda confianza</option><option value="alta">Solo alta</option><option value="media">Solo media</option><option value="baja">Solo baja</option>
+        </select>
+        <button class="btn" id="btnCriterios" title="Desmarca coincidencias por nombre de carpeta, expedientes nuevos, confianza baja, despachos de Cámara y repositorios">Aplicar criterios</button>
+        <button class="btn" id="btnMarcarTodo">Marcar todo</button>
+        <button class="btn" id="btnDesmarcar">Desmarcar todo</button>
+        <button class="btn btn-primary" id="btnAplicar">Mover ${fmt(marcados)}</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0">${motivos.map(m =>
+      `<button class="btn motivo-toggle" data-m="${esc(m)}" title="Marcar o desmarcar este motivo">${tagMotivo(m)} ${pendientes.filter(f => f.motivo === m).length}</button>`).join('')}</div>
+    <div id="aplicarEstado"></div>
+    <datalist id="carpetasList">${carpetas.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
+    <div class="table-wrap" style="max-height:640px"><table class="data-table"><thead><tr>
+      <th style="width:30px"></th><th>Archivo</th><th>Motivo</th><th>Confianza</th><th>Destino</th>
+    </tr></thead><tbody>${orden.map(([destino, fs], g) => `
+      <tr style="background:var(--accent-wash)">
+        <td><input type="checkbox" class="grupo-check" data-g="${g}" ${fs.every(f => f.marcado) ? 'checked' : ''}></td>
+        <td colspan="3"><b>${esc(destino)}</b> <span style="color:var(--ink-muted)">(${fs.length})</span></td>
+        <td><input class="search-input grupo-destino" data-g="${g}" list="carpetasList" placeholder="Cambiar destino del grupo..." style="padding:4px 8px;font-size:0.75rem"></td>
+      </tr>` + fs.map(f => `
+      <tr>
+        <td><input type="checkbox" class="fila-check" data-i="${f.i}" ${f.marcado ? 'checked' : ''}></td>
+        <td title="${esc(f.archivo)}">${esc(f.nombre)}${f.extracto ? `<div style="color:var(--ink-muted);font-size:0.7rem;max-width:420px;white-space:normal">${esc(f.extracto)}</div>` : ''}</td>
+        <td>${tagMotivo(f.motivo)} <span style="color:var(--ink-muted)">${esc((f.detalle || '').slice(0, 40))}</span></td>
+        <td>${esc(f.confianza)}</td>
+        <td><input class="search-input fila-destino" data-i="${f.i}" list="carpetasList" value="${esc(f.destino_rel)}" style="padding:4px 8px;font-size:0.75rem"></td>
+      </tr>`).join('')).join('')}</tbody></table></div></div>`;
+
+  document.getElementById('revConf').value = conf;
+  document.getElementById('revConf').addEventListener('change', renderRevision);
+  document.getElementById('btnCriterios').addEventListener('click', aplicarCriterios);
+  document.getElementById('btnMarcarTodo').addEventListener('click', () => { pendientes.forEach(f => f.marcado = true); renderRevision(); });
+  document.getElementById('btnDesmarcar').addEventListener('click', () => { pendientes.forEach(f => f.marcado = false); renderRevision(); });
+  document.querySelectorAll('.motivo-toggle').forEach(b => b.addEventListener('click', () => {
+    const fs = pendientes.filter(f => f.motivo === b.dataset.m);
+    const valor = !fs.every(f => f.marcado);
+    fs.forEach(f => f.marcado = valor);
+    renderRevision();
+  }));
+  document.querySelectorAll('.grupo-check').forEach(c => c.addEventListener('change', () => {
+    orden[c.dataset.g][1].forEach(f => f.marcado = c.checked);
+    renderRevision();
+  }));
+  document.querySelectorAll('.fila-check').forEach(c => c.addEventListener('change', () => {
+    prop.filas[c.dataset.i].marcado = c.checked;
+    renderRevision();
+  }));
+  document.querySelectorAll('.fila-destino').forEach(inp => inp.addEventListener('change', () => {
+    prop.filas[inp.dataset.i].destino_rel = inp.value.trim();
+  }));
+  document.querySelectorAll('.grupo-destino').forEach(inp => inp.addEventListener('change', () => {
+    if (inp.value.trim()) { orden[inp.dataset.g][1].forEach(f => f.destino_rel = inp.value.trim()); renderRevision(); }
+  }));
+  document.getElementById('btnAplicar').addEventListener('click', () =>
+    aplicarPropuesta().catch(err => mostrarError(document.getElementById('aplicarEstado'), err)));
+}
+
+function destinoAbsoluto(rel) {
+  return /^[A-Za-z]:[\\/]/.test(rel) ? rel : prop.base.replace(/[\\/]$/, '') + '\\' + rel.replace(/\//g, '\\');
+}
+
+async function aplicarPropuesta() {
+  const sel = prop.filas.filter(f => f.existe && f.marcado);
+  if (!sel.length) { alert('No hay archivos marcados.'); return; }
+  const destinos = new Set(sel.map(f => f.destino_rel)).size;
+  if (!confirm(`¿Mover ${sel.length} archivos a ${destinos} destinos?\n\nQueda en el historial y se puede deshacer.`)) return;
+  const filas = prop.filas.map(f => ({
+    archivo: f.archivo, destino: destinoAbsoluto(f.destino_rel), motivo: f.motivo, detalle: f.detalle,
+    confianza: f.confianza, accion: f.existe && f.marcado ? 'mover' : 'queda',
+  }));
+  const r = await api(`/api/propuestas/${encodeURIComponent(prop.nombre)}/aplicar`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filas }) });
+  alert(`Movidos: ${r.movidos}${r.tanda ? ' (tanda ' + r.tanda + ')' : ''}` + (r.avisos.length ? `\n\nAvisos (${r.avisos.length}):\n` + r.avisos.slice(0, 15).join('\n') : ''));
+  await loadTandas();
+  await abrirPropuesta(prop.nombre);
+}
+
+
+// Soltar archivos
+const zona = document.getElementById('zonaSoltar');
+const inputSoltar = document.getElementById('inputSoltar');
+zona.addEventListener('click', () => inputSoltar.click());
+['dragenter', 'dragover'].forEach(ev => zona.addEventListener(ev, e => { e.preventDefault(); zona.classList.add('encima'); }));
+['dragleave', 'drop'].forEach(ev => zona.addEventListener(ev, e => { e.preventDefault(); zona.classList.remove('encima'); }));
+zona.addEventListener('drop', e => subirArchivos([...e.dataTransfer.files]));
+inputSoltar.addEventListener('change', () => { subirArchivos([...inputSoltar.files]); inputSoltar.value = ''; });
+
+async function subirArchivos(files) {
+  const el = document.getElementById('soltarEstado');
+  files = files.filter(f => f.size > 0 || f.type);
+  if (!files.length) { el.textContent = 'No hay archivos (las carpetas no se pueden soltar: abrila y seleccioná sus archivos).'; return; }
+  const fd = new FormData();
+  files.forEach(f => fd.append('archivos', f, f.name));
+  el.textContent = `Copiando ${files.length} archivos...`;
+  try {
+    let s = await api('/api/soltar', { method: 'POST', body: fd });
+    while (s.estado === 'corriendo') {
+      el.textContent = `${s.guardados ?? files.length} copiados. Clasificando ${fmt(s.hechos)} de ${fmt(s.total ?? 0)}...`;
+      await new Promise(r => setTimeout(r, 800));
+      s = { ...s, ...(await api('/api/simular/' + s.id)) };
+    }
+    if (s.estado === 'error') throw new Error(s.error);
+    el.textContent = `Listo: ${fmt(s.total)} archivos en ${s.origen}`;
+    await loadTandas();
+    await abrirPropuesta(s.csv);
+  } catch (err) { el.textContent = ''; mostrarError(el.parentElement, err); }
+}
+
+// Historial
+async function loadHistorial() {
+  const q = document.getElementById('historialSearch').value;
+  document.getElementById('historialBody').innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spinner"></div>Cargando...</div></td></tr>';
+  const h = await api('/api/historial?q=' + encodeURIComponent(q));
+  document.getElementById('historialSub').textContent =
+    `${fmt(h.total_movimientos)} movimientos en ${fmt(h.tandas.length)} tandas${q ? ' (filtrado)' : ''}. Consola y dashboard.`;
+  document.getElementById('historialBody').innerHTML = h.tandas.map(t => `<tr>
+    <td>${esc((t.fecha || '').replace('T', ' ').slice(0, 16))}</td>
+    <td>${esc(t.id)}${t.derivada ? ' <span style="color:var(--ink-muted)" title="Agrupada por horario (historial anterior al registro de tandas)">≈</span>' : ''}</td>
+    <td>${fmt(Number(t.movidos))}</td>
+    <td style="white-space:nowrap"><button class="btn ver-tanda" data-a="${t.primera_fila}" data-b="${t.ultima_fila}">Ver</button>
+      ${String(t.origen).startsWith('deshacer') ? '' : `<button class="btn deshacer-tanda" data-a="${t.primera_fila}" data-b="${t.ultima_fila}" data-n="${t.movidos}">Deshacer</button>`}</td>
+    <td>${Object.entries(t.motivos).map(([m, n]) => tagMotivo(m) + ' ' + n).join(' ')}</td>
+    <td>${esc(Object.entries(t.areas).map(([a, n]) => `${a} (${n})`).join(', '))}</td>
+    <td title="${esc(t.origen)}">${esc((t.origen || '').slice(0, 32))}</td>
+  </tr>`).join('');
+  document.getElementById('carpetasBody').innerHTML = h.carpetas.map(c => `<tr>
+    <td>${esc((c.fecha || '').replace('T', ' ').slice(0, 16))}</td><td>${esc(c.accion)}</td><td>${esc(c.origen || '—')}</td><td>${esc(c.destino)}</td></tr>`).join('');
+  document.querySelectorAll('.ver-tanda').forEach(b => b.addEventListener('click', () => verTanda(b.dataset.a, b.dataset.b)));
+  document.querySelectorAll('.deshacer-tanda').forEach(b => b.addEventListener('click', () => deshacerTanda(b)));
+}
+async function verTanda(a, b) {
+  const el = document.getElementById('historialDetalle');
+  loading(el);
+  const filas = await api(`/api/historial/filas?primera=${a}&ultima=${b}`);
+  el.innerHTML = `<div class="card" style="margin-top:16px"><div class="card-title">Filas ${a}–${b} (${filas.length})</div>
+    <div class="table-wrap"><table class="data-table"><thead><tr><th>Fecha</th><th>Origen</th><th>Destino</th><th>Motivo</th></tr></thead><tbody>`
+    + filas.map(f => `<tr><td>${esc(f.fecha.replace('T', ' '))}</td><td title="${esc(f.origen)}">${esc(f.origen_rel)}</td>
+      <td title="${esc(f.destino)}">${esc(f.destino_rel)}</td><td>${tagMotivo(f.motivo)}</td></tr>`).join('')
+    + '</tbody></table></div></div>';
+  el.scrollIntoView({ behavior: 'smooth' });
+}
+async function deshacerTanda(b) {
+  if (!confirm(`¿Deshacer ${b.dataset.n} movimientos (filas ${b.dataset.a}–${b.dataset.b})?\n\nCada archivo vuelve a su origen si el origen está libre. No se borra nada.`)) return;
+  const el = document.getElementById('historialEstado');
+  try {
+    const r = await api('/api/tandas/deshacer', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ primera: Number(b.dataset.a), ultima: Number(b.dataset.b) }) });
+    alert(`Restaurados: ${r.restaurados}` + (r.avisos.length ? `\n\nAvisos (${r.avisos.length}):\n` + r.avisos.slice(0, 15).join('\n') : ''));
+    await loadHistorial();
+  } catch (err) { mostrarError(el, err); }
+}
+document.getElementById('btnHistorialBuscar').addEventListener('click', () =>
+  loadHistorial().catch(err => mostrarError(document.getElementById('historialEstado'), err)));
+
+// Aliases
+async function loadAliases() {
+  const [manuales, auto] = await Promise.all([api('/api/aliases'), api('/api/aliases/cartera')]);
+  renderAliases(manuales);
+  document.getElementById('aliasCartera').innerHTML = auto.map(a =>
+    `<tr><td><code>${esc(a.pattern)}</code></td><td>${esc(a.caso)}</td><td>${esc(a.expte || '')}</td></tr>`).join('')
+    || '<tr><td colspan="3" style="color:var(--ink-muted)">Sin alias generados</td></tr>';
+}
+function renderAliases(aliases) {
+  document.getElementById('aliasEditor').innerHTML = aliases.map((a, i) => `
+    <div class="alias-row">
+      <input value="${esc(a.pattern)}" placeholder="regex..." data-field="pattern">
+      <input value="${esc(a.caso)}" placeholder="carpeta-causa..." data-field="caso">
+      <button class="alias-del" data-i="${i}" title="Eliminar">×</button>
+    </div>`).join('');
+  document.querySelectorAll('.alias-del').forEach(b => b.addEventListener('click', () => {
+    const data = getAliasData(false);
+    data.splice(Number(b.dataset.i), 1);
+    renderAliases(data);
+  }));
+}
+function getAliasData(soloCompletos = true) {
+  const data = [...document.querySelectorAll('.alias-row')].map(r => ({
+    pattern: r.querySelector('[data-field="pattern"]').value,
+    caso: r.querySelector('[data-field="caso"]').value,
+  }));
+  return soloCompletos ? data.filter(a => a.pattern && a.caso) : data;
+}
+document.getElementById('btnAddAlias').addEventListener('click', () => {
+  const data = getAliasData(false);
+  data.push({ pattern: '', caso: '' });
+  renderAliases(data);
+});
+document.getElementById('btnSaveAliases').addEventListener('click', async () => {
+  const page = document.getElementById('page-aliases');
+  page.querySelectorAll('.card').forEach(c => c.remove());
+  try {
+    const res = await api('/api/aliases', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(getAliasData()),
+    });
+    alert(`Aliases guardados (${res.count})`);
+  } catch (err) {
+    mostrarError(page, err);
+  }
+});
+
+function iniciales(nombre) {
+  const p = String(nombre || '').trim().split(/\s+/).filter(Boolean);
+  return ((p[0]?.[0] || 'O') + (p[1]?.[0] || p[0]?.[1] || '')).toUpperCase();
+}
+let configActual = null;
+function abrirConfig(obligatoria) {
+  const c = configActual || {};
+  document.getElementById('cfgEstudio').value = c.estudio || '';
+  document.getElementById('cfgUbicacion').value = c.ubicacion || '';
+  document.getElementById('cfgApellidos').value = (c.apellidos || []).join(', ');
+  document.getElementById('cfgBase').value = c.base || '';
+  document.getElementById('cfgError').hidden = true;
+  document.getElementById('cfgTitulo').textContent = obligatoria ? 'Configurá el organizador' : 'Configuración';
+  document.getElementById('cfgCancelar').hidden = obligatoria;
+  document.getElementById('cfgOverlay').hidden = false;
+  cargarOcr().catch(() => {});
+  document.getElementById('cfgEstudio').focus();
+}
+async function cargarOcr() {
+  const o = await api('/api/ocr');
+  document.getElementById('ocrEstado').innerHTML = o.disponible
+    ? 'Instalado. Los PDFs escaneados se leen en español.'
+    : `No instalado: los PDFs escaneados sin texto no se pueden leer. Se descarga el idioma español (2,3 MB) desde
+       <a href="${esc(o.pagina)}" target="_blank" rel="noopener">el repositorio oficial de Tesseract</a> y se guarda en tu carpeta de usuario.`;
+  document.getElementById('ocrInstalar').hidden = o.disponible;
+  const aviso = document.getElementById('ocrAviso');
+  if (aviso) aviso.hidden = o.disponible;
+}
+document.getElementById('ocrInstalar').addEventListener('click', async ev => {
+  const b = ev.target;
+  b.disabled = true; b.textContent = 'Descargando...';
+  try {
+    await api('/api/ocr/instalar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    await cargarOcr();
+  } catch (e) {
+    document.getElementById('ocrEstado').textContent = e.message;
+  } finally { b.disabled = false; b.textContent = 'Instalar OCR en español'; }
+});
+async function cargarConfig() {
+  configActual = await api('/api/config');
+  const nombre = configActual.estudio;
+  document.title = nombre ? `Organizador — ${nombre}` : 'Organizador';
+  document.getElementById('logoMark').textContent = iniciales(nombre);
+  document.getElementById('sbFooter').innerHTML =
+    `${esc(nombre)}${configActual.ubicacion ? '<br>' + esc(configActual.ubicacion) : ''}<br><button type="button" id="cfgAbrir">Configuración</button><br><button type="button" id="ocrAviso" hidden>OCR sin instalar</button>`;
+  document.getElementById('cfgAbrir').addEventListener('click', () => abrirConfig(false));
+  document.getElementById('ocrAviso').addEventListener('click', () => abrirConfig(false));
+  cargarOcr().catch(() => {});
+  if (!configActual.configurado) abrirConfig(true);
+}
+document.getElementById('cfgCancelar').addEventListener('click', () => { document.getElementById('cfgOverlay').hidden = true; });
+document.getElementById('cfgForm').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const err = document.getElementById('cfgError');
+  err.hidden = true;
+  try {
+    await api('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      estudio: document.getElementById('cfgEstudio').value, ubicacion: document.getElementById('cfgUbicacion').value,
+      apellidos: document.getElementById('cfgApellidos').value, base: document.getElementById('cfgBase').value }) });
+    document.getElementById('cfgGuardar').disabled = true;
+    document.getElementById('cfgGuardar').textContent = 'Reiniciando…';
+    for (let i = 0; i < 40; i++) {
+      await new Promise(r => setTimeout(r, 750));
+      try { const r = await fetch('/api/config'); if (r.ok) return location.reload(); } catch { /* reiniciando */ }
+    }
+  } catch (e) {
+    err.textContent = e.message;
+    err.hidden = false;
+  }
+});
+cargarConfig().catch(() => {});
+
+loadPage('overview');
+</script>
+</body>
+</html>
