@@ -1,6 +1,6 @@
 """Cartera propia: importar fuentes, cruzar con carpetas y generar alias.
 
-    python cartera_cli.py importar [--escritorio JSON] [--log TXT] [--propios TXT]
+    python cartera_cli.py importar [--propios TXT]
     python cartera_cli.py cruzar              # informe, sin tocar carpetas
     python cartera_cli.py cruzar --aplicar    # crea carpetas faltantes y renombra las de solo numero
     python cartera_cli.py cruzar --aplicar --sin-crear   # solo renombra; las nuevas se crean a demanda
@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from cartera import cargar, fusionar, guardar, normalizar_expte, posibles_erratas  # noqa: E402
 from cartera_alias import aliases_desde_cartera  # noqa: E402
 from cartera_cruce import aplicar, carpetas_sin_causa, cruzar, reporte_md  # noqa: E402
-from cartera_fuentes import desde_escritorio, desde_log_justi, desde_propios_txt  # noqa: E402
+from cartera_fuentes import desde_propios_txt  # noqa: E402
 
 from config import BASE  # noqa: E402
 
@@ -31,10 +31,6 @@ from config import BASE  # noqa: E402
 def _importar(args, sistema: Path) -> None:
     ruta = sistema / "cartera.json"
     nuevas = []
-    if args.escritorio:
-        nuevas += desde_escritorio(json.loads(args.escritorio.read_text(encoding="utf-8")))
-    if args.log:
-        nuevas += desde_log_justi(args.log.read_text(encoding="utf-8"))
     if args.propios:
         causas, invalidas = desde_propios_txt(args.propios.read_text(encoding="utf-8"))
         nuevas += causas
@@ -108,8 +104,6 @@ def main(argv: list[str] | None = None, mapa: dict[str, str] | None = None) -> N
     ap.add_argument("--base", type=Path, default=BASE)
     sub = ap.add_subparsers(dest="cmd", required=True)
     imp = sub.add_parser("importar")
-    imp.add_argument("--escritorio", type=Path)
-    imp.add_argument("--log", type=Path)
     imp.add_argument("--propios", type=Path)
     cr = sub.add_parser("cruzar")
     cr.add_argument("--aplicar", action="store_true")

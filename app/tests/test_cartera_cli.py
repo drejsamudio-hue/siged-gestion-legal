@@ -28,19 +28,21 @@ def test_alias_solo_para_apellidos_unicos(tmp_path):
     assert not rx.search("vidalia") and not rx.search("svidal")
 
 
+def sembrar_cartera(base, pares):
+    """Cartera inicial con carátulas: la lista manual solo aporta números."""
+    guardar([Causa(normalizar_expte(e), caratula=c) for e, c in pares], base / "_SISTEMA" / "cartera.json")
+
+
 def test_flujo_completo_importar_cruzar_aliases(tmp_path):
     base, casos = armar_base(tmp_path)
-    log = tmp_path / "justi.log"
-    log.write_text("[1] 333333/2021 ✅ ANALIZADO\n    VIDAL c/ LUNA — Danos\n"
-                   "[2] 222222/2019 ✅ ANALIZADO\n    PAZ c/ MORENO — Danos\n"
-                   "[3] 999999/2024 ✅ ANALIZADO\n    NUEVO c/ CASO — Danos\n", encoding="utf-8")
+    sembrar_cartera(base, [("333333/2021", "VIDAL c/ LUNA"), ("222222/2019", "PAZ c/ MORENO"), ("999999/2024", "NUEVO c/ CASO")])
     propios = tmp_path / "propios.txt"
-    propios.write_text("333333-2021\n990011-15\n", encoding="utf-8")
+    propios.write_text("333333-2021\n222222-2019\n999999-2024\n990011-15\n", encoding="utf-8")
 
-    main(["--base", str(base), "importar", "--log", str(log), "--propios", str(propios)], mapa={})
+    main(["--base", str(base), "importar", "--propios", str(propios)], mapa={})
     causas = cargar(base / "_SISTEMA" / "cartera.json")
     assert [c.expte.clave for c in causas] == ["333333/2021", "222222/2019", "999999/2024"]
-    assert causas[0].fuentes == ["justi-log", "propios-txt"]
+    assert causas[0].fuentes == ["propios-txt"]
 
     main(["--base", str(base), "cruzar"], mapa={"333333/2021": "2021-vidal-luna"})
     assert not (casos / "2024-nuevo-caso").exists()
@@ -102,10 +104,10 @@ def test_alias_de_un_bis_apunta_al_principal(tmp_path):
 
 def test_cruzar_guarda_la_carpeta_prevista_y_sin_crear_solo_renombra(tmp_path):
     base, casos = armar_base(tmp_path)
-    log = tmp_path / "justi.log"
-    log.write_text("[1] 222222/2019 ✅ ANALIZADO\n    PAZ c/ MORENO — Danos\n"
-                   "[2] 999999/2024 ✅ ANALIZADO\n    NUEVO c/ CASO — Danos\n", encoding="utf-8")
-    main(["--base", str(base), "importar", "--log", str(log)], mapa={})
+    sembrar_cartera(base, [("222222/2019", "PAZ c/ MORENO"), ("999999/2024", "NUEVO c/ CASO")])
+    propios = tmp_path / "propios.txt"
+    propios.write_text("222222-2019\n999999-2024\n", encoding="utf-8")
+    main(["--base", str(base), "importar", "--propios", str(propios)], mapa={})
     main(["--base", str(base), "cruzar"], mapa={})
     causas = {c.expte.clave: c for c in cargar(base / "_SISTEMA" / "cartera.json")}
     assert causas["999999/2024"].carpeta_prevista == "2024-nuevo-caso"

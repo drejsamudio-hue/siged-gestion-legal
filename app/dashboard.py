@@ -30,7 +30,6 @@ import cartera_alta  # noqa: E402
 import ocr_setup  # noqa: E402
 from cartera import cargar as cargar_cartera, guardar as guardar_cartera, normalizar_expte  # noqa: E402
 from cartera_cruce import cruzar  # noqa: E402
-from cartera_fuentes import _reparar  # noqa: E402
 from extractor import extraer_universal  # noqa: E402
 from ingesta import (  # noqa: E402
     ALIAS_FILE, BASE, CASOS, INBOX, NO_CLASIFICADOS, RUTEO_CSV,
@@ -39,7 +38,6 @@ from ingesta import (  # noqa: E402
 
 LOG_FILE = BASE / "_SISTEMA" / "dashboard_log.json"
 import config as cfg  # noqa: E402
-from config import JUSTI_DIR  # noqa: E402
 RE_APELLIDO = re.compile(r"^[a-záéíóúñü]{3,30}$", re.I)
 RE_PROPUESTA = re.compile(r"^REORG_[\w.-]+\.csv$")
 COLUMNAS = ["archivo", "destino", "motivo", "detalle", "confianza", "accion", "extracto"]
@@ -290,7 +288,7 @@ def api_tipos():
     return jsonify(dict(exts.most_common(20)))
 
 
-# ── Cartera y escritorio ─────────────────────────────────────────────
+# ── Cartera ─────────────────────────────────────────────
 
 def _sistema() -> Path:
     return ingesta.SISTEMA
@@ -432,34 +430,6 @@ def api_cartera_escanear_agregar():
         if e is not None:
             items.append((e, str(f.get("caratula") or "").strip() or None))
     return jsonify(_agregar_a_cartera(items, "escaneo"))
-
-
-def _ultimo_escritorio() -> Path | None:
-    candidatos = sorted(JUSTI_DIR.glob("*/escritorio.json")) if JUSTI_DIR.exists() else []
-    return candidatos[-1] if candidatos else None
-
-
-@app.route("/api/escritorio")
-def api_escritorio():
-    ruta = _ultimo_escritorio()
-    if ruta is None:
-        return jsonify({"archivo": None, "filas": []})
-    ruta_cartera = _sistema() / "cartera.json"
-    causas = cargar_cartera(ruta_cartera) if ruta_cartera.exists() else []
-    claves = {c.expte.clave_completa for c in causas}
-    ids = {c.id_expediente for c in causas if c.id_expediente}
-    filas = []
-    for f in json.loads(ruta.read_text(encoding="utf-8")):
-        numero = f.get("numero")
-        texto = numero.get("texto", "") if isinstance(numero, dict) else (numero or "")
-        e = normalizar_expte(texto) if isinstance(texto, str) else None
-        idx = str(f.get("id_expediente") or "")
-        filas.append({
-            "numero": texto, "id": idx, "designacion": _reparar(f.get("designacion")),
-            "origen": _reparar(f.get("origen")), "resaltado": bool(f.get("resaltado")),
-            "en_cartera": (e is not None and e.clave_completa in claves) or idx in ids,
-        })
-    return jsonify({"archivo": str(ruta), "filas": filas})
 
 
 # ── Historial y tandas ───────────────────────────────────────────────

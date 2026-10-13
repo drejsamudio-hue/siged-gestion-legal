@@ -28,7 +28,6 @@ ESTUDIO = str(_CFG.get("estudio") or "")
 UBICACION = str(_CFG.get("ubicacion") or "")
 
 BASE = _ruta("ORGANIZADOR_BASE", _CFG.get("base") or Path.home() / "Organizador")
-JUSTI_DIR = _ruta("ORGANIZADOR_JUSTI_DIR", BASE / "_SISTEMA" / "escritorio")
 def _tessdata() -> Path:
     """Carpeta con spa.traineddata: la del usuario (donde se instala), una junto al .exe o ~/tessdata."""
     propia = CONFIG_PATH.parent / "tessdata"
