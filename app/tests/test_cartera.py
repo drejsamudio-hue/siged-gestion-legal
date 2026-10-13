@@ -26,14 +26,14 @@ def test_numero_de_siete_digitos_es_sospechoso():
 
 
 def test_fusionar_completa_datos_y_suma_fuentes():
-    a = Causa(Expte(111111, 2022), id_expediente="900", fuentes=["justi-log"])
+    a = Causa(Expte(111111, 2022), id_expediente="900", fuentes=["otra"])
     b = Causa(Expte(111111, 2022, ex="5/2010"), caratula="PEREZ c/ GOMEZ", fuentes=["propios-txt"])
     c = Causa(Expte(111111, 2022, bis=1, bis_anio=23), fuentes=["propios-txt"])
     out = fusionar([a, b, c])
     assert len(out) == 2
     principal = out[0]
     assert (principal.id_expediente, principal.caratula, principal.expte.ex) == ("900", "PEREZ c/ GOMEZ", "5/2010")
-    assert principal.fuentes == ["justi-log", "propios-txt"]
+    assert principal.fuentes == ["otra", "propios-txt"]
 
 
 def test_detecta_errata_de_un_digito():
