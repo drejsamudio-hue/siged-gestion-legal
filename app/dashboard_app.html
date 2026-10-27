@@ -754,19 +754,6 @@ body {
     </div>
   </div>
 
-  <!-- ESCRITORIO SIGED -->
-  <div class="section" id="page-escritorio">
-    <h1 class="page-title">Escritorio SIGED</h1>
-    <p class="page-subtitle" id="escritorioArchivo">Última lectura del escritorio (skill justi-control, solo lectura)</p>
-    <div class="search-bar">
-      <input class="search-input" id="escritorioSearch" placeholder="Buscar..." autocomplete="off">
-      <label class="check-row"><input type="checkbox" id="escritorioFaltan"> Solo los que no están en la cartera</label>
-    </div>
-    <div class="table-wrap"><table class="data-table"><thead><tr>
-      <th>Número</th><th>Designación</th><th>Dependencia</th><th>En cartera</th>
-    </tr></thead><tbody id="escritorioBody"></tbody></table></div>
-  </div>
-
   <!-- TANDAS -->
   <div class="section" id="page-tandas">
     <h1 class="page-title">Tandas</h1>
@@ -855,7 +842,7 @@ document.querySelectorAll('.nav-item').forEach(btn => {
 
 function loadPage(page) {
   const fn = { overview: loadOverview, expedientes: loadExpedientes, aliases: loadAliases, cartera: loadCartera,
-              escritorio: loadEscritorio, tandas: loadTandas, historial: loadHistorial }[page];
+              tandas: loadTandas, historial: loadHistorial }[page];
   if (fn) fn().catch(err => mostrarError(document.getElementById('page-' + page), err));
 }
 
@@ -1117,29 +1104,6 @@ function renderFuera() {
 }
 document.getElementById('fueraClase').addEventListener('change', renderFuera);
 document.getElementById('carteraEstado').addEventListener('change', renderCartera);
-
-// Escritorio SIGED
-let escritorio = [];
-async function loadEscritorio() {
-  const data = await api('/api/escritorio');
-  escritorio = data.filas;
-  const faltan = escritorio.filter(f => !f.en_cartera).length;
-  document.getElementById('escritorioArchivo').textContent = data.archivo
-    ? `${escritorio.length} expedientes, ${faltan} fuera de la cartera. Lectura: ${data.archivo}`
-    : 'No hay lecturas del escritorio. Correr la skill justi-control (comando escritorio).';
-  renderEscritorio();
-}
-function renderEscritorio() {
-  const q = document.getElementById('escritorioSearch').value.toLowerCase();
-  const soloFaltan = document.getElementById('escritorioFaltan').checked;
-  document.getElementById('escritorioBody').innerHTML = escritorio
-    .filter(f => (!soloFaltan || !f.en_cartera) && (!q || [f.numero, f.designacion, f.origen].some(v => (v || '').toLowerCase().includes(q))))
-    .map(f => `<tr${f.en_cartera ? '' : ' style="background:var(--warn-wash)"'}>
-      <td class="mono">${esc(f.numero)}</td><td title="${esc(f.designacion)}">${esc((f.designacion || '').slice(0, 80))}</td>
-      <td>${esc(f.origen || '—')}</td><td>${f.en_cartera ? '✓' : '<span class="tag tag-match">Falta</span>'}</td></tr>`).join('');
-}
-document.getElementById('escritorioSearch').addEventListener('input', renderEscritorio);
-document.getElementById('escritorioFaltan').addEventListener('change', renderEscritorio);
 
 // Tandas
 let prop = null;          // propuesta abierta: {nombre, base, filas}

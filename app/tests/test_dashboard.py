@@ -27,7 +27,6 @@ def base(tmp_path, monkeypatch):
             monkeypatch.setattr(D, nombre, valor)
     monkeypatch.setattr(I, "_exptes_cache", None)
     monkeypatch.setattr(I, "_indice_cache", (-1.0, I.IndiceCartera([])))
-    monkeypatch.setattr(D, "JUSTI_DIR", tmp_path / "justi")
     monkeypatch.setattr(D, "LOG_FILE", b / "_SISTEMA" / "dashboard_log.json")
     guardar([Causa(normalizar_expte("111111/2022"), id_expediente="555555", caratula="PEREZ c/ GOMEZ",
                    carpeta="2022-perez-gomez"),
@@ -45,17 +44,6 @@ def test_cartera_muestra_estado_y_carpetas(base, cliente):
     causas = {c["expte"]: c for c in cliente.get("/api/cartera").get_json()["causas"]}
     assert causas["111111/2022"]["existe"] and causas["111111/2022"]["accion"] == "ok"
     assert causas["222222/2024"]["prevista"] == "2024-luna-sol" and not causas["222222/2024"]["existe"]
-
-
-def test_escritorio_marca_lo_que_falta_en_la_cartera(base, cliente, tmp_path):
-    (tmp_path / "justi" / "2026-09-26").mkdir(parents=True)
-    (tmp_path / "justi" / "2026-09-26" / "escritorio.json").write_text(json.dumps([
-        {"id_expediente": "555555", "numero": {"texto": "111111/2022"}, "designacion": "PEREZ c/ GOMEZ"},
-        {"id_expediente": "999999", "numero": {"texto": "333333/2023"}, "designacion": "PEÃ‘A c/ SOSA"},
-    ]), encoding="utf-8")
-    filas = cliente.get("/api/escritorio").get_json()["filas"]
-    assert [f["en_cartera"] for f in filas] == [True, False]
-    assert filas[1]["designacion"] == "PEÑA c/ SOSA"
 
 
 def test_simular_revisar_aplicar_y_deshacer(base, cliente, tmp_path):
